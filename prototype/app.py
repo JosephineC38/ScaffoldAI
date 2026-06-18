@@ -12,7 +12,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 # CSV logging
 def log_to_csv(data):
-    file_exigsts = os.path.isfile(CSV_LOG_PATH)
+    file_exists = os.path.isfile(CSV_LOG_PATH)
     with open(CSV_LOG_PATH, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=data.keys())
         if not file_exists:
