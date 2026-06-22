@@ -1,5 +1,6 @@
 [
     {
+<<<<<<< HEAD
         "timestamp": "2026-06-18 12:44:31",
         "mode": "Concept Explanation",
         "input": "sdfjisdoifjds",
@@ -17,6 +18,11 @@
         "timestamp": "2026-06-18 12:44:51",
         "mode": "Concept Explanation",
         "input": "jfipsadjf",
+=======
+        "timestamp": "2026-06-17 20:22:15",
+        "mode": "Concept Explanation",
+        "input": "explain the first law of thermodynamics",
+>>>>>>> c9bd13faad85982a2704c05492d2aab1f08f3888
         "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
         "helpful": null
     }
