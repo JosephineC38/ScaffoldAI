@@ -5,6 +5,7 @@ with open("config/system_prompt_components.json", 'r') as rules_file:
 
 extracted_text = []
 
+# turns system_prompt_components.json into one string
 def prompt_builder():
   for item in data["components"]:
     text_content = item.get("text")
