@@ -3,6 +3,7 @@ import os
 import json
 import csv
 from datetime import datetime
+from prototype.architecture.two_pass_engine import generate_response
 
 # file path
 LOG_DIR = "eval"
@@ -45,7 +46,7 @@ mode = st.selectbox("Helping Mode", [
 # output/input boxes
 st.text_area("Output", value=st.session_state.get("output", ""), height=200)
 
-user_input = st.text_area("Input", placeholder="Type your question here...", height=100)
+user_input = st.text_area("Input", placeholder="Ask a question...", height=100)
 
 # buttons
 col1, col2 = st.columns([1, 5])
@@ -76,3 +77,17 @@ if submit and user_input.strip():
 if helpful:
     st.session_state["last_helpful"] = True
     st.success("Logged as helpful.")
+
+# conversation history
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
+
+if user_input:
+    response = generate_response(user_input)
+
+    st.session_state.conversation_history.append(
+        {"role": "user", "content": user_input}
+    )
+    st.session_state.conversation_history.append(
+        {"role": "assistant", "content": response}
+    )
