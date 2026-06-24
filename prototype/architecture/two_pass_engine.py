@@ -12,6 +12,9 @@ load_dotenv(dotenv_path)
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
 
+user_input = input("Enter question: ")
+conversation_history = []
+
 def classify_topic(user_input: str) -> str:
   classify_topic_prompt = f"""
     Given the user input, classify which topic it falls under using ONLY the given topic names
@@ -22,7 +25,7 @@ def classify_topic(user_input: str) -> str:
     User input: {user_input}
   """
 
-  classify_topic_analysis = client.chat.completion.create(
+  classify_topic_analysis = client.chat.completions.create(
     model = "gpt-4o-mini", # $0.15/million input tokens, $0.60/million output tokens
     messages=[
       {"role": "user",
@@ -32,7 +35,9 @@ def classify_topic(user_input: str) -> str:
     temperature=0.0
   )
 
-  return classify_topic_analysis
+  return classify_topic_analysis.choices[0].message.content.strip()
+
+topic = classify_topic(user_input)
 
 def pass_one(user_input: str, topic: str) -> str:
   pass_one_prompt = f"""
@@ -90,7 +95,7 @@ def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_
     temperature=0.7 # higher creativity output -> offers more variation for user
   )
 
-  return pass_two_analysis #.choices[0].message.content
+  return pass_two_analysis.choices[0].message.content
 
 def generate_response(user_input: str, topic, conversation_history) -> str:
   diagnosis = pass_one(user_input, topic)
@@ -98,3 +103,6 @@ def generate_response(user_input: str, topic, conversation_history) -> str:
 
   return system_response
 
+response = generate_response(user_input, topic, conversation_history)
+
+print(response)

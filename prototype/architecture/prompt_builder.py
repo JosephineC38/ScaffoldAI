@@ -1,12 +1,16 @@
 import json
+from pathlib import Path
 
-with open("config/system_prompt_components.json", 'r') as rules_file:
+base_dir = Path(__file__).parent
+config_path = base_dir / "config" / "system_prompt_components.json"
+
+with open(config_path, 'r') as rules_file:
   data = json.load(rules_file)
-
-extracted_text = []
 
 # turns system_prompt_components.json into one string
 def prompt_builder():
+  extracted_text = []
+
   for item in data["components"]:
     text_content = item.get("text")
     component_content = item.get("component")
@@ -19,6 +23,6 @@ def prompt_builder():
     elif isinstance(text_content, str):
       extracted_text.append(text_content)
 
-  return extracted_text
+  return " ".join(extracted_text)
 
     
