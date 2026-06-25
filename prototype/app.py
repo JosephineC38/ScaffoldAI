@@ -6,9 +6,10 @@ import os
 import json
 import csv
 from datetime import datetime
+from time import sleep
 
 # Define file paths for logging within the /eval directory
-LOG_DIR = "eval"
+LOG_DIR = "prototype/eval"
 CSV_LOG_PATH = os.path.join(LOG_DIR, "activity_log.csv")
 JSON_LOG_PATH = os.path.join(LOG_DIR, "activity_log.json")
 
@@ -48,16 +49,19 @@ def log_to_json(data_dict):
 if "user_text" not in st.session_state:
     st.session_state.user_text = ""
 
+if "upload_key" not in st.session_state:
+    st.session_state.upload_key = 0
+
 # Clear the text input field and record the user_text   
 def clear_text():
     st.session_state.user_text = st.session_state.clear_user_text
     st.session_state.student_history.append(st.session_state.user_text)
     st.session_state.ai_history.append("This is a test response")
-    chat.write("This is a test response")
+
+    chat.border = True
+    chat.info("This is a test response")
 
     st.session_state.clear_user_text = ""
-
-    # st.session_state.uploaded_file = None 
 
 def submit_text():
     clear_text()
@@ -68,54 +72,96 @@ def new_chat():
     st.session_state.ai_history = []
     st.session_state.clear_user_text = ""
 
-    with open(CSV_LOG_PATH, "r+") as f:
-        f.seek(0)
-        f.truncate()
+    if os.path.exists(CSV_LOG_PATH):
+        with open(CSV_LOG_PATH, "r+") as f:
+            f.seek(0)
+            f.truncate()
 
-    with open(JSON_LOG_PATH, "r+") as f:
-        f.seek(0)
-        f.truncate()
+    if os.path.exists(JSON_LOG_PATH):
+        with open(JSON_LOG_PATH, "r+") as f:
+            f.seek(0)
+            f.truncate()
+    
+    for file in os.listdir(LOG_DIR):
+        if file.endswith((".png", ".jpg", ".jpeg")):
+            os.remove(os.path.join(LOG_DIR, file))
+            print(f"Deleted: {file}")
+    
+    #st.session_state.uploaded_file = None 
+
 
 # -----------------------------------------------------------------------------
-# STREAMLIT UI SKELETON
+# HOME PAGE
 # -----------------------------------------------------------------------------
-st.set_page_config(page_title="Foundational Architecture", layout="centered")
+st.set_page_config(page_title="Homepage", layout="wide")
 
-st.title("ScaffoldAI")
+st.markdown("<h1 style='text-align: center;'>Welcome</h1>", unsafe_allow_html=True)
+st.write("")
 
-st.markdown("---")
+input_container = st.container(key="image_upload_form", border=True)
 
-# Input Section
-st.header("User Inputs")
+with input_container:
+    # Input Section
+    st.text_area(key="clear_user_text", label="Type something here...", placeholder="Type something here...", 
+                            help="This is a text input field for user interaction.", height="content", on_change=clear_text)
 
-st.text_area(key="clear_user_text", label="Type something here...", placeholder="Type something here...", 
-                         help="This is a text input field for user interaction.", height="content", on_change=clear_text)
+    # Chatbot Buttons
+    col1, col2, col3 = st.columns([2,1,1])
 
-# Chatbot Buttons
-col1, col2, col3 = st.columns([2,1,1])
+    # Image Upload
+    with col1:
+        uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")
 
-# Dropdown Selection
-with col1:
-    options = ["Concept Explanation", "Step-by-Step", "Hint Only", "Check-My-Plan"]
-    selected_option = st.selectbox("Reasoning Model:", options)
-    if selected_option == "Concept Explanation":
-        pass
-    elif selected_option == "Step-by-Step":
-        pass
-    elif selected_option == "Hint Only":
-        pass
-    elif selected_option == "Check-My-Plan":
-        pass
+    # Dropdown Selection
+    with col2:
+        options = ["Concept Explanation", "Step-by-Step", "Hint Only", "Check-My-Plan"]
+        selected_option = st.selectbox("Reasoning Model:", options)
+        if selected_option == "Concept Explanation":
+            pass
+        elif selected_option == "Step-by-Step":
+            pass
+        elif selected_option == "Hint Only":
+            pass
+        elif selected_option == "Check-My-Plan":
+            pass
 
-# Image Upload
-with col2:
-    uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False)
+    # Enter Button
+    with col3:
+        st.button("Submit 🚀", use_container_width=True,on_click=submit_text)
 
-# Enter Button
-with col3:
-    st.button(label="",shortcut="Enter", on_click=submit_text)
+chat = st.container(border=False)
 
-chat = st.container(border=True)
+# --- COURSE MATERIALS SECTION ---
+st.markdown("<p style='text-align: center; color: gray;'>Access different course materials</p>", unsafe_allow_html=True)
+material_cols = st.columns(4)
+
+materials = [
+    {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
+    {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
+    {"title": "🔬 Labs", "desc": "Lab manuals and safety guidelines."},
+    {"title": "📖 Syllabus", "desc": "Course schedule and grading criteria."}
+]
+
+for i, col in enumerate(material_cols):
+    with col:
+        with st.container(border=True):
+            st.markdown(f"### {materials[i]['title']}")
+            st.write(materials[i]['desc'])
+            if st.button("Open", key=f"mat_btn_{i}", use_container_width=True):
+                openPage = st.empty()
+                openPage.info(f"Opening {materials[i]['title']}...")
+                sleep(1) #Update later to sync with actual page load
+                openPage.empty()
+                
+                # Rewrite Later
+                if i == 0:
+                    st.switch_page("pages/lectures.py")
+                elif i == 1:
+                    st.switch_page("pages/labs.py")
+                elif i == 2:
+                    st.switch_page("pages/quizzes.py")
+                elif i == 3:
+                    st.switch_page("pages/syllabus.py")
 
 # Helpful Action Button
 st.markdown("### Actions")
@@ -156,9 +202,11 @@ if "student_history" not in st.session_state:
 if "ai_history" not in st.session_state:
     st.session_state.ai_history = []
 
+st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
+st.sidebar.write("---")
 st.sidebar.title("Chatbot History")
-st.sidebar.button("+ New Chat", on_click=new_chat)
 
 for student_txt, ai_txt in zip(st.session_state.student_history, st.session_state.ai_history):
     st.sidebar.markdown(f"**Student:** {student_txt}", text_alignment="left")
     st.sidebar.markdown(f"**AI:** {ai_txt}", text_alignment="right")
+    st.sidebar.write("---")
