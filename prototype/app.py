@@ -95,7 +95,7 @@ def new_chat():
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Homepage", layout="wide")
 
-st.markdown("<h1 style='text-align: center;'>Welcome</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>ScaffoldAI</h1>", unsafe_allow_html=True)
 st.write("")
 
 input_container = st.container(key="image_upload_form", border=True)
@@ -138,8 +138,9 @@ material_cols = st.columns(4)
 materials = [
     {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
     {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
-    {"title": "🔬 Labs", "desc": "Lab manuals and safety guidelines."},
-    {"title": "📖 Syllabus", "desc": "Course schedule and grading criteria."}
+    {"title": "🔬 Recitation", "desc": "Lab manuals and safety guidelines."},
+    {"title": "📖 Syllabus", "desc": "Course schedule and grading criteria."},
+    {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
 ]
 
 for i, col in enumerate(material_cols):
@@ -157,11 +158,13 @@ for i, col in enumerate(material_cols):
                 if i == 0:
                     st.switch_page("pages/lectures.py")
                 elif i == 1:
-                    st.switch_page("pages/labs.py")
-                elif i == 2:
                     st.switch_page("pages/quizzes.py")
+                elif i == 2:
+                    st.switch_page("pages/recitation.py")
                 elif i == 3:
                     st.switch_page("pages/syllabus.py")
+                elif i == 4:
+                    st.switch_page("pages/survey.py")
 
 # Helpful Action Button
 st.markdown("### Actions")
@@ -204,7 +207,7 @@ if "ai_history" not in st.session_state:
 
 st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
 st.sidebar.write("---")
-st.sidebar.title("Chatbot History")
+st.sidebar.title("ScaffoldAI History")
 
 for student_txt, ai_txt in zip(st.session_state.student_history, st.session_state.ai_history):
     st.sidebar.markdown(f"**Student:** {student_txt}", text_alignment="left")
