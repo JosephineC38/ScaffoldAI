@@ -5,5 +5,54 @@
         "input": "explain the first law of thermodynamics",
         "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
         "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:28:47",
+        "mode": "Concept Explanation",
+        "input": "What is the second law of thermodynamics",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:30:51",
+        "mode": "Concept Explanation",
+        "input": "What is the second law of thermodynamics",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:30:54",
+        "mode": "Concept Explanation",
+        "input": "What is the second law of thermodynamics",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:31:55",
+        "mode": "Concept Explanation",
+        "input": "What is the first law of thermodynamics",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:33:00",
+        "mode": "Concept Explanation",
+        "input": "What is the first law of thermodynamics",
+        "output": "[ScaffoldAI - Concept Explanation] Great question! The first law of thermodynamics is an important concept that helps us understand how energy works in systems. It\u2019s often related to the principle of energy conservation. Would you like to explore how energy is conserved in different processes, like heating or doing work, to better understand this law?",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 11:33:45",
+        "mode": "Concept Explanation",
+        "input": "What does the first law of thermodynamics state?\n",
+        "output": "[ScaffoldAI - Concept Explanation] The first law of thermodynamics is a fundamental principle that relates to energy conservation in systems. Imagine it as a rule that helps us understand how energy behaves. When you're ready, let's explore what this law states and how it applies to different scenarios. Do you have any examples or systems in mind where you think this law might be applicable?",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-07-01 14:32:26",
+        "mode": "Concept Explanation",
+        "input": "What is the first law of thermodynamics?",
+        "output": "[ScaffoldAI - Concept Explanation] That's a great question! The first law of thermodynamics is fundamental to understanding energy in physical systems. To help clarify it further, let's think about energy itself. What do you know about the different forms of energy and how they can change from one form to another?",
+        "helpful": null
     }
 ]

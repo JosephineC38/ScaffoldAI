@@ -3,7 +3,9 @@ import os
 import json
 import csv
 from datetime import datetime
-from prototype.architecture.two_pass_engine import generate_response
+from architecture.two_pass_engine import generate_response
+from architecture.leakage_check import contains_phrase, pass_three
+
 
 # file path
 LOG_DIR = "eval"
@@ -57,9 +59,39 @@ with col1:
 with col2:
     helpful = st.button("Helpful?")
 
-# submission logic 
+
+# helpful button logic
+if helpful:
+    st.session_state["last_helpful"] = True
+    st.success("Logged as helpful.")
+
+# conversation history
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
+
+max_history_messages = 8
+
+if user_input:
+    response, topic = generate_response(user_input, st.session_state.conversation_history)
+
+    st.session_state.conversation_history.append(
+        {"role": "user", "content": user_input}
+    )
+    st.session_state.conversation_history.append(
+        {"role": "assistant", "content": response}
+    )
+    st.session_state.conversation_history = st.session_state.conversation_history[-max_history_messages:]
+
+    keyword_leakage = contains_phrase(response)
+
+    if keyword_leakage == True:
+        new_response = pass_three(response, topic)
+        print(new_response)
+
+
+# submission logic
 if submit and user_input.strip():
-    response = f"[ScaffoldAI - {mode}] Response will appear here once the AI is connected."
+    response = f"[ScaffoldAI - {mode}] {response}"
     st.session_state["output"] = response
 
     log = {
@@ -72,22 +104,3 @@ if submit and user_input.strip():
     log_to_csv(log)
     log_to_json(log)
     st.rerun()
-
-# helpful button logic
-if helpful:
-    st.session_state["last_helpful"] = True
-    st.success("Logged as helpful.")
-
-# conversation history
-if "conversation_history" not in st.session_state:
-    st.session_state.conversation_history = []
-
-if user_input:
-    response = generate_response(user_input)
-
-    st.session_state.conversation_history.append(
-        {"role": "user", "content": user_input}
-    )
-    st.session_state.conversation_history.append(
-        {"role": "assistant", "content": response}
-    )
