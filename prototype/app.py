@@ -133,13 +133,13 @@ chat = st.container(border=False)
 
 # --- COURSE MATERIALS SECTION ---
 st.markdown("<p style='text-align: center; color: gray;'>Access different course materials</p>", unsafe_allow_html=True)
-material_cols = st.columns(4)
+material_cols = st.columns(5)
 
 materials = [
     {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
     {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
-    {"title": "🔬 Recitation", "desc": "Lab manuals and safety guidelines."},
-    {"title": "📖 Syllabus", "desc": "Course schedule and grading criteria."},
+    {"title": "🔬 Recitations", "desc": "Lab manuals and safety guidelines."},
+    {"title": "📖 Syllabus", "desc": "Review the class syllabus."},
     {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
 ]
 
@@ -160,7 +160,7 @@ for i, col in enumerate(material_cols):
                 elif i == 1:
                     st.switch_page("pages/quizzes.py")
                 elif i == 2:
-                    st.switch_page("pages/recitation.py")
+                    st.switch_page("pages/recitations.py")
                 elif i == 3:
                     st.switch_page("pages/syllabus.py")
                 elif i == 4:
