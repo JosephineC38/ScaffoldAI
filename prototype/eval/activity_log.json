@@ -7,6 +7,27 @@
         "helpful": null
     },
     {
+        "timestamp": "2026-06-18 12:44:31",
+        "mode": "Concept Explanation",
+        "input": "sdfjisdoifjds",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-06-18 12:44:50",
+        "mode": "Concept Explanation",
+        "input": "jfipsadjf",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
+        "timestamp": "2026-06-18 12:44:51",
+        "mode": "Concept Explanation",
+        "input": "jfipsadjf",
+        "output": "[ScaffoldAI - Concept Explanation] Response will appear here once the AI is connected.",
+        "helpful": null
+    },
+    {
         "timestamp": "2026-07-01 11:28:47",
         "mode": "Concept Explanation",
         "input": "What is the second law of thermodynamics",
@@ -38,7 +59,7 @@
         "timestamp": "2026-07-01 11:33:00",
         "mode": "Concept Explanation",
         "input": "What is the first law of thermodynamics",
-        "output": "[ScaffoldAI - Concept Explanation] Great question! The first law of thermodynamics is an important concept that helps us understand how energy works in systems. It\u2019s often related to the principle of energy conservation. Would you like to explore how energy is conserved in different processes, like heating or doing work, to better understand this law?",
+        "output": "[ScaffoldAI - Concept Explanation] Great question! The first law of thermodynamics is an important concept that helps us understand how energy works in systems. It’s often related to the principle of energy conservation. Would you like to explore how energy is conserved in different processes, like heating or doing work, to better understand this law?",
         "helpful": null
     },
     {
@@ -59,14 +80,14 @@
         "timestamp": "2026-07-02 12:24:14",
         "mode": "Concept Explanation",
         "input": "What is the first law of Thermodynamics",
-        "output": "[ScaffoldAI - Concept Explanation] Great question! The first law of thermodynamics is a fundamental principle that deals with energy. It\u2019s often related to the idea of conservation of energy. To get us started, can you tell me what you think energy conservation might mean in the context of thermodynamics? What are some ways you think energy can be transformed from one form to another?",
+        "output": "[ScaffoldAI - Concept Explanation] Great question! The first law of thermodynamics is a fundamental principle that deals with energy. It’s often related to the idea of conservation of energy. To get us started, can you tell me what you think energy conservation might mean in the context of thermodynamics? What are some ways you think energy can be transformed from one form to another?",
         "helpful": null
     },
     {
         "timestamp": "2026-07-02 14:02:40",
         "mode": "Concept Explanation",
         "input": "What is the first law of thermodynamics",
-        "output": "[ScaffoldAI - Concept Explanation] That's a great question! The first law of thermodynamics is fundamental to understanding energy conservation in thermodynamic systems. Instead of just giving you a definition, let's explore its meaning together.\n\nThink about a closed system\u2014like a sealed container of gas. What happens to the energy in that system when you add heat? Or, what if the gas expands and does work on its surroundings? How do you think energy is conserved in these scenarios? \n\nCan you describe what you think happens to the energy in the system when heat is added or when work is done? This will help us dive deeper into the first law together!",
+        "output": "[ScaffoldAI - Concept Explanation] That's a great question! The first law of thermodynamics is fundamental to understanding energy conservation in thermodynamic systems. Instead of just giving you a definition, let's explore its meaning together.\n\nThink about a closed system—like a sealed container of gas. What happens to the energy in that system when you add heat? Or, what if the gas expands and does work on its surroundings? How do you think energy is conserved in these scenarios? \n\nCan you describe what you think happens to the energy in the system when heat is added or when work is done? This will help us dive deeper into the first law together!",
         "helpful": null
     }
 ]
