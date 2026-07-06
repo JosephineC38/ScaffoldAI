@@ -11,11 +11,11 @@ DIRECT_ANSWER_DECLARATIONS = [
 THERMO_SPECIFIC = [
   "the temperature is",
   "the pressure is",
-  "the word done is",
+  "the work done is",
   "the heat transfer is",
   "the entropy is",
   "the enthalpy is",
-  "the effeciency is",
+  "the efficiency is",
   "the quality is",
 ]
 
@@ -44,3 +44,10 @@ FORMULA_REVELATION = [
   "rearranging gives",
   "rearranging yields"
 ]
+
+ALL_PHRASES = (
+  DIRECT_ANSWER_DECLARATIONS
+  + THERMO_SPECIFIC
+  + CALCULATION_COMPLETION
+  + FORMULA_REVELATION
+)
