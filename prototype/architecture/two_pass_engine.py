@@ -3,15 +3,19 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
-import prompt_builder
-from config.thermo_topics import TOPICS
+
+try:
+    from .prompt_builder import prompt_builder
+    from .config.thermo_topics import TOPICS
+except ImportError:
+    from prompt_builder import prompt_builder
+    from config.thermo_topics import TOPICS
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
 
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
-
 
 def pass_one(user_input: str):
   pass_one_prompt = f"""
@@ -56,7 +60,7 @@ topic, diagnosis = pass_one(input)
 print(diagnosis)
 
 def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list) -> str:
-  system_prompt = prompt_builder.prompt_builder()
+  system_prompt = prompt_builder()
 
   classification = json.loads(pass_one_diagnosis).get("classification")
 
@@ -101,4 +105,11 @@ def generate_response(user_input: str, conversation_history):
   return system_response, topic
 
 response = generate_response(input, [])
-print(response)
+# print(response)
+
+def return_response(user_input):
+  response, _ = generate_response(user_input, [])
+  print(response)
+  return response
+
+

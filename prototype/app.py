@@ -1,12 +1,21 @@
 # the main Streamlit application
 from pydoc import text
-
-import streamlit as st
+from datetime import datetime
+from time import sleep
+from pathlib import Path
+import sys
 import os
 import json
 import csv
-from datetime import datetime
-from time import sleep
+
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+import architecture.two_pass_engine as ai
+import architecture.prompt_builder as prompt_builder
+import streamlit as st
+import pandas as pd
 
 # Define file paths for logging within the /eval directory
 LOG_DIR = "prototype/eval"
@@ -52,24 +61,42 @@ if "user_text" not in st.session_state:
 if "upload_key" not in st.session_state:
     st.session_state.upload_key = 0
 
-# Clear the text input field and record the user_text   
-def clear_text():
-    st.session_state.user_text = st.session_state.clear_user_text
-    st.session_state.student_history.append(st.session_state.user_text)
-    st.session_state.ai_history.append("This is a test response")
+# Process the current text input once when the submit button is pressed.
+def submit_text():
+    user_input = st.session_state.clear_user_text.strip()
+    st.session_state.user_text = user_input
 
+    # Get AI response
+    response = ai.return_response(user_input)
+
+    # Package data to log
+    log_payload = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "input_text": st.session_state.user_text,
+        "response": response,
+        "selected_mode": selected_option
+    }
+   
+    # Save to local storage
+    log_to_csv(log_payload)
+    log_to_json(log_payload)
+
+    # Image to log if uploaded
+    if uploaded_file is not None:
+        image_path = os.path.join(LOG_DIR, uploaded_file.name)
+        with open(image_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        log_payload["uploaded_image"] = image_path
+ 
+    # Display reponse to user 
     chat.border = True
-    chat.info("This is a test response")
+    chat.info(st.session_state.user_text)
+    chat.info(response)
 
     st.session_state.clear_user_text = ""
 
-def submit_text():
-    clear_text()
-
 # Clear the chat history
 def new_chat():
-    st.session_state.student_history = []
-    st.session_state.ai_history = []
     st.session_state.clear_user_text = ""
 
     if os.path.exists(CSV_LOG_PATH):
@@ -103,7 +130,7 @@ input_container = st.container(key="image_upload_form", border=True)
 with input_container:
     # Input Section
     st.text_area(key="clear_user_text", label="Type something here...", placeholder="Type something here...", 
-                            help="This is a text input field for user interaction.", height="content", on_change=clear_text)
+                            help="This is a text input field for user interaction.", height="content")
 
     # Chatbot Buttons
     col1, col2, col3 = st.columns([2,1,1])
@@ -166,50 +193,21 @@ for i, col in enumerate(material_cols):
                 elif i == 4:
                     st.switch_page("pages/survey.py")
 
-# Helpful Action Button
-st.markdown("### Actions")
-if st.button("🚀 Process & Log Data", help="Click to run calculations and log inputs locally."):
-    # Package data to log
-    log_payload = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "input_text": st.session_state.user_text,
-        "selected_mode": selected_option
-    }
-   
-    # Save to local storage
-    log_to_csv(log_payload)
-    log_to_json(log_payload)
-
-    # Image to log if uploaded
-    if uploaded_file is not None:
-        image_path = os.path.join(LOG_DIR, uploaded_file.name)
-        with open(image_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        log_payload["uploaded_image"] = image_path
-   
-    st.success("Data successfully processed and logged to `/eval` directory!")
-   
-    # Output Display Section
-    st.markdown("---")
-    st.header("Outputs & Results Preview")
-    st.json(log_payload)
-else:
-    st.info("Fill out the inputs above and press the button to see the output structure.")
-
 # -----------------------------------------------------------------------------
 # SIDEBAR
 # -----------------------------------------------------------------------------
-if "student_history" not in st.session_state:
-    st.session_state.student_history = []
-
-if "ai_history" not in st.session_state:
-    st.session_state.ai_history = []
-
 st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
 st.sidebar.write("---")
 st.sidebar.title("ScaffoldAI History")
 
-for student_txt, ai_txt in zip(st.session_state.student_history, st.session_state.ai_history):
-    st.sidebar.markdown(f"**Student:** {student_txt}", text_alignment="left")
-    st.sidebar.markdown(f"**AI:** {ai_txt}", text_alignment="right")
-    st.sidebar.write("---")
+# Chat History 
+if os.path.isfile(JSON_LOG_PATH):
+    with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
+        try:
+            logs = json.load(f)
+            for log in logs:
+                st.sidebar.markdown(f"**Student:** {log['input_text']}", text_alignment="left")
+                st.sidebar.markdown(f"**ScaffoldAI:** {log['response']}", text_alignment="right")
+                st.sidebar.write("---")
+        except json.JSONDecodeError:
+            st.sidebar.write("")
