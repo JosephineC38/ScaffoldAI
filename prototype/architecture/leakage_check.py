@@ -40,4 +40,4 @@ def pass_three(leaked_response: str, topic: str) -> str: # only called if output
     temperature=0.7
   )
 
-  return pass_three_response
+  return pass_three_response.choices[0].message.content
