@@ -33,8 +33,7 @@ def contains_stated_answer(text: str) -> bool:
     return has_digit and has_confirmation_language
 
 
-# ---- Tier (a): deterministic arithmetic check ----------------------------
-
+# deterministic arithmetic check
 _ALLOWED_BINOPS = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
@@ -108,8 +107,7 @@ def _check_arithmetic(text: str) -> dict:
     return {"tier_result": "ARITHMETIC_OK", "checks": checks}
 
 
-# ---- Tier (b): semantic / convention check --------------------------------
-
+# semantic / convention check
 def _extract_number(text) -> float:
     """Pull the first numeric value out of a short string like '450 kJ' or
     '-550 kJ'. Returns None if nothing parseable is found."""
@@ -172,7 +170,7 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
     """
 
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=500,
         temperature=0.2,
@@ -209,8 +207,7 @@ def _last_stated_number(text: str):
     return all_numbers[-1] if all_numbers else None
 
 
-# ---- Combined verdict ------------------------------------------------------
-
+# combined verdict
 def verify_answer(problem_statement: str, student_answer: str, topic: str) -> dict:
     """Check a student's stated answer against static reference material —
     deliberately does NOT take conversation_history, so it can't inherit
