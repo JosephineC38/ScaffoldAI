@@ -1,18 +1,28 @@
-import streamlit as st
+# the main Streamlit application
+from pydoc import text
+from datetime import datetime
+from time import sleep
+from pathlib import Path
+import sys
 import os
 import json
 import csv
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
 
-# file path
-LOG_DIR = "eval"
+# Define file paths for logging within the /eval directory
+LOG_DIR = "prototype/eval"
 CSV_LOG_PATH = os.path.join(LOG_DIR, "activity_log.csv")
 JSON_LOG_PATH = os.path.join(LOG_DIR, "activity_log.json")
+
+# Ensure the eval directory exists
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# CSV logging
-def log_to_csv(data):
+# -----------------------------------------------------------------------------
+# LOGGING FUNCTIONS
+# -----------------------------------------------------------------------------
+def log_to_csv(data_dict):
+    """Appends data as a row in a local CSV file."""
     file_exists = os.path.isfile(CSV_LOG_PATH)
     existing_rows = []
     existing_fieldnames = []
@@ -41,15 +51,18 @@ def log_to_csv(data):
                 writer.writeheader()
             writer.writerow(data)
 
-def log_to_json(data):
+def log_to_json(data_dict):
+    """Appends data to a local JSON array."""
     logs = []
     if os.path.isfile(JSON_LOG_PATH):
         try:
             with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
                 logs = json.load(f)
         except json.JSONDecodeError:
-            pass
-    logs.append(data)
+            pass  # Handle empty or corrupted file
+           
+    logs.append(data_dict)
+   
     with open(JSON_LOG_PATH, "w", encoding="utf-8") as f:
         json.dump(logs, f, indent=4)
 
@@ -131,6 +144,59 @@ if submit and user_input.strip():
     st.session_state["last_log_timestamp"] = timestamp
     st.rerun()
 
+# --- COURSE MATERIALS SECTION ---
+st.markdown("<p style='text-align: center; color: gray;'>Access different course materials</p>", unsafe_allow_html=True)
+material_cols = st.columns(5)
+
+materials = [
+    {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
+    {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
+    {"title": "🔬 Recitations", "desc": "Lab manuals and safety guidelines."},
+    {"title": "📖 Syllabus", "desc": "Review the class syllabus."},
+    {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
+]
+
+for i, col in enumerate(material_cols):
+    with col:
+        with st.container(border=True):
+            st.markdown(f"### {materials[i]['title']}")
+            st.write(materials[i]['desc'])
+            if st.button("Open", key=f"mat_btn_{i}", use_container_width=True):
+                openPage = st.empty()
+                openPage.info(f"Opening {materials[i]['title']}...")
+                sleep(1) #Update later to sync with actual page load
+                openPage.empty()
+                
+                # Rewrite Later
+                if i == 0:
+                    st.switch_page("pages/lectures.py")
+                elif i == 1:
+                    st.switch_page("pages/quizzes.py")
+                elif i == 2:
+                    st.switch_page("pages/recitations.py")
+                elif i == 3:
+                    st.switch_page("pages/syllabus.py")
+                elif i == 4:
+                    st.switch_page("pages/survey.py")
+
+# -----------------------------------------------------------------------------
+# SIDEBAR
+# -----------------------------------------------------------------------------
+st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
+st.sidebar.write("---")
+st.sidebar.title("ScaffoldAI History")
+
+# Chat History 
+if os.path.isfile(JSON_LOG_PATH):
+    with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
+        try:
+            logs = json.load(f)
+            for log in logs:
+                st.sidebar.markdown(f"**Student:** {log['input_text']}", text_alignment="left")
+                st.sidebar.markdown(f"**ScaffoldAI:** {log['response']}", text_alignment="right")
+                st.sidebar.write("---")
+        except json.JSONDecodeError:
+            st.sidebar.write("")
 # helpful button logic
 if helpful:
     last_timestamp = st.session_state.get("last_log_timestamp")
