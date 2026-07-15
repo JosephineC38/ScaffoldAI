@@ -1,26 +1,10 @@
 import os
 import streamlit as st
 import pandas as pd
+from instructor_access import account_login
 
 # 1. Setup Password Protection / Admin Access
-ADMIN_PASSWORD = os.getenv("SYLLABUS_ADMIN_PASSWORD")  
-
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-st.sidebar.title("🔐 Instructor Access")
-if not st.session_state["authenticated"]:
-    pwd_input = st.sidebar.text_input("Enter Admin Password to Edit Fields", type="password")
-    if st.sidebar.button("Login"):
-        if pwd_input == ADMIN_PASSWORD:
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.sidebar.error("Incorrect password.")
-else:
-    if st.sidebar.button("Log Out"):
-        st.session_state["authenticated"] = False
-        st.rerun()
+account_login()
 
 # 2. Initialize Session State Variables for the 4 Fields
 if "class_schedule" not in st.session_state:
@@ -39,8 +23,6 @@ st.title("📚 ME 234A Full Syllabus Portal")
 st.write("Authorized users can modify administrative constraints. The official lecture layout remains fixed.")
 
 st.markdown("---")
-
-st.markdown(ADMIN_PASSWORD)
 
 # 3. Dynamic Form Inputs (Admin Mode) vs Public View (Read-Only Mode)
 if st.session_state["authenticated"]:
