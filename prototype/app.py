@@ -106,7 +106,7 @@ if "prev_input" not in st.session_state:
 def submit_text():
     user_input = st.session_state.get("user_text", "").strip()
     if user_input:
-        response, topic, diagnostics = generate_response(user_input, st.session_state["conversation_history"])
+        response, topic, diagnostics = generate_response(user_input, st.session_state["conversation_history"], st.session_state["mode"])
         st.session_state["output"] = response
         st.session_state["conversation_history"].append({"role": "user", "content": user_input})
         st.session_state["conversation_history"].append({"role": "assistant", "content": response})
@@ -193,7 +193,7 @@ mode = st.selectbox("Helping Mode", [
     "Step-by-step",
     "Hint-only",
     "Check-my-plan"
-])
+], key="mode")
 
 # Upload Image Section
 uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")

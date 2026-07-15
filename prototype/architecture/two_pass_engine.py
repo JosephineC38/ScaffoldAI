@@ -98,65 +98,44 @@ def pass_one(user_input: str, conversation_history: list):
 
   return topic, json.dumps(diagnosis)
 
-def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, verification: dict = None) -> str:
-  system_prompt = prompt_builder.prompt_builder()
-
-  classification = json.loads(pass_one_diagnosis).get("classification")
-  # Only take the direct-verdict path when we have a trustworthy (non-uncertain)
-  # verification result to back it up. A CONFIRMATION classification with no
-  # verification, or an UNCERTAIN/disagreement verdict, falls back to the same
-  # cautious Socratic branch as IPS/IRL rather than risking a confident guess.
-  confirmed_with_verification = (
-    classification == "CONFIRMATION" and verification and verification.get("verdict") in ("CORRECT", "INCORRECT")
-  )
-
-  if classification == "CONCEPTUAL":
-    pass_two_prompt = f"""
-      topic: {topic}
-      diagnostic context: {pass_one_diagnosis}
-      original student input message: {user_input}
-
-      The student is asking a direct factual or definitional question (a law, definition, or formula) with no problem context to work through. Use the diagnostic context only to calibrate depth and framing, not to decide whether to answer.
-
-      Give a clear, correct, and concise answer. State the answer directly instead of responding with a question. Do not end your response with a question — if you want to invite further engagement, do it as a statement (e.g. "Let me know if you'd like to see this applied to a problem."), not a question.
-      """
-  elif confirmed_with_verification:
-    pass_two_prompt = f"""
-      topic: {topic}
-      diagnostic context: {pass_one_diagnosis}
-      original student input message: {user_input}
-      {_verification_context(verification)}
-
-      The student has already worked through a specific problem and stated a specific result, and is now asking you to confirm whether it's correct. An independent verification check has already been run — use its verdict above as your primary source of truth rather than re-deriving from scratch and second-guessing a result that's already been checked.
-
-      Give a clear, direct verdict: tell them plainly whether their result is correct or incorrect, and state the correct value if theirs was wrong. State this directly instead of responding with a question. Do not end your response with a question — if you want to invite further engagement, do it as a statement, not a question.
-      """
-  else:
-    pass_two_prompt = f"""
-      topic: {topic}
-      diagnoistic context (do not reveal this to the student): {pass_one_diagnosis}
-      original student input message: {user_input}
-      {_verification_context(verification)}
-
-      Using the diagnostic context above to inform your response, generate a response to help guide the student.
-
-      Do not reveal the diagnosis or the correct answer.
-      """
-
+def _call_pass_two_model(system_prompt: str, conversation_history: list, pass_two_prompt: str) -> str:
   messages = [{"role": "system", "content": system_prompt}]
   messages += conversation_history
   messages.append({"role": "user", "content": pass_two_prompt})
 
-  pass_two_analysis = client.chat.completions.create(
-    model = "gpt-4o-mini", # $0.15/million input tokens, $0.60/million output tokens
-    messages=messages, # api responds to the most recent index
+  response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=messages,
     max_tokens=200,
-    temperature=0.7 # higher creativity output -> offers more variation for user
+    temperature=0.7
   )
+  return response.choices[0].message.content
 
-  return pass_two_analysis.choices[0].message.content
 
-def generate_response(user_input: str, conversation_history):
+# Imported here (after _verification_context/_call_pass_two_model are defined
+# above) rather than at module top — architecture.modes.tutor,
+# architecture.modes.hint_only, and architecture.modes.concept_explanation all
+# import those two names back from this module, so importing them before
+# those names exist on this partially-initialized module would raise a
+# circular-import ImportError.
+from architecture.modes import tutor
+from architecture.modes import hint_only
+from architecture.modes import concept_explanation
+
+MODE_HANDLERS = {
+  "Tutor": tutor.handle,
+  "Hint-only": hint_only.handle,
+  "Concept Explanation": concept_explanation.handle,
+}
+
+def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None):
+  system_prompt = prompt_builder.prompt_builder()
+  handler = MODE_HANDLERS.get(mode)
+  if handler is None:
+    raise NotImplementedError(f"Mode '{mode}' not yet implemented")
+  return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt)
+
+def generate_response(user_input: str, conversation_history, mode: str):
   topic, diagnosis = pass_one(user_input, conversation_history)
   classification = json.loads(diagnosis).get("classification")
 
@@ -170,16 +149,8 @@ def generate_response(user_input: str, conversation_history):
     problem_statement, student_answer = _extract_verification_inputs(user_input, conversation_history)
     verification = verify_answer(problem_statement, student_answer, topic)
 
-  system_response = pass_two(user_input, diagnosis, topic, conversation_history, verification)
+  system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification)
 
-  # CONCEPTUAL responses, and CONFIRMATION responses backed by a trustworthy
-  # verification verdict, are meant to state the answer directly, so the
-  # leakage filter only applies when pass_two actually stayed in the
-  # Socratic-scaffolding branch (IPS/IRL, or CONFIRMATION without a usable
-  # verification verdict).
-  gave_direct_answer = classification == "CONCEPTUAL" or (
-    classification == "CONFIRMATION" and verification and verification.get("verdict") in ("CORRECT", "INCORRECT")
-  )
   if not gave_direct_answer and contains_phrase(system_response):
     system_response = pass_three(system_response, topic)
 
