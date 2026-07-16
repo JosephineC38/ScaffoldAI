@@ -1,7 +1,7 @@
 import streamlit as st
 import os
-st.set_page_config(page_title="Recitation", layout="wide")
-st.title("Recitations")
+from instructor_access import account_login
+
 
 # Define file paths for recitation files
 REC_DIR = "prototype/materials/recitations"
@@ -64,107 +64,124 @@ def updateRecitation(recIdx):
 # -----------------------------------------------------------------------------
 # RECITATION PAGE
 # -----------------------------------------------------------------------------
-with st.expander("Recitations Update"):
-    st.write("Only for Admin User, account creation will be later")
+st.set_page_config(page_title="Recitation", layout="wide")
+st.title("Recitations")
+account_login()
 
-    for i in enumerate(updateRecitations):
-        chapter_num = int(i[1]["RecNum"])
-        with st.container(border=True):
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.file_uploader(label=f"Update Recitation for Chapter {chapter_num}", key=f"rec{chapter_num}Update", accept_multiple_files=False)
-            with col2:
-                st.button("Upload Recitation", key=f"rec{chapter_num}UpdateButton", on_click=lambda i=i: updateRecitation(int(i[1]['RecNum'])))
-               
-             
-st.write("---")
-
-with st.expander("Chapter 1 - Introduction and Basic Concepts"):
-    with open(st.session_state.rec1 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter1Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_1",
-        )
-    st.pdf(st.session_state.rec1, height=600, key="recitation_1")
+def rec_update():
+    st.info("🔓 Admin Mode Active.")
+    with st.expander("Recitations Update"):
+        for i in enumerate(updateRecitations):
+            chapter_num = int(i[1]["RecNum"])
+            with st.container(border=True):
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.file_uploader(label=f"Update Recitation for Chapter {chapter_num}", key=f"rec{chapter_num}Update", accept_multiple_files=False)
+                with col2:
+                    st.button("Upload Recitation", key=f"rec{chapter_num}UpdateButton", on_click=lambda i=i: updateRecitation(int(i[1]['RecNum'])))
+                    
+    st.write("---")
 
 
-with st.expander("Chapter 2 - Energy, Energy Transfer, and General Energy Analysis"):
-    with open(st.session_state.rec1 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter2Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_2",
-        )
-    st.pdf(st.session_state.rec2, height=600, key="recitation_2")
+def recitations():
+    with st.expander("Chapter 1 - Introduction and Basic Concepts"):
+        with open(st.session_state.rec1 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter1Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_1",
+            )
+        st.pdf(st.session_state.rec1, height=600, key="recitation_1")
 
-with st.expander("Chapter 3 - Properties of Pure Substances"):
-    with open(st.session_state.rec3 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter3Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_3",
-        )
-    st.pdf(st.session_state.rec3, height=600, key="recitation_3")
 
-with st.expander("Chapter 4 - Energy Analysis of a Closed System"):
-    with open(st.session_state.rec4 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter4Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_4",
-        )
-    st.pdf(st.session_state.rec4, height=600, key="recitation_4")
+    with st.expander("Chapter 2 - Energy, Energy Transfer, and General Energy Analysis"):
+        with open(st.session_state.rec1 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter2Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_2",
+            )
+        st.pdf(st.session_state.rec2, height=600, key="recitation_2")
 
-with st.expander("Chapter 5 - Mass and Energy Analysis of Control Volume"):
-    with open(st.session_state.rec5 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter5Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_5",
-        )
-    st.pdf(st.session_state.rec5, height=600, key="recitation_5")
+    with st.expander("Chapter 3 - Properties of Pure Substances"):
+        with open(st.session_state.rec3 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter3Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_3",
+            )
+        st.pdf(st.session_state.rec3, height=600, key="recitation_3")
 
-with st.expander("Chapter 6 - The Second Law of Thermodynamics"):
-    with open(st.session_state.rec6 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter6Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_6",
-        )
-    st.pdf(st.session_state.rec6, height=600, key="recitation_6")
+    with st.expander("Chapter 4 - Energy Analysis of a Closed System"):
+        with open(st.session_state.rec4 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter4Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_4",
+            )
+        st.pdf(st.session_state.rec4, height=600, key="recitation_4")
 
-with st.expander("Chapter 7 - Entropy"):
-    with open(st.session_state.rec7 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter7Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_7",
-        )
-    st.pdf(st.session_state.rec7, height=600, key="recitation_7")
+    with st.expander("Chapter 5 - Mass and Energy Analysis of Control Volume"):
+        with open(st.session_state.rec5 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter5Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_5",
+            )
+        st.pdf(st.session_state.rec5, height=600, key="recitation_5")
 
-with st.expander("Chapter 8 - Cycle"):
-    with open(st.session_state.rec8 , "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name="thermoChapter8Workshop.pdf",
-            mime="application/pdf",
-            key="download_recitation_8",
-        )
-    st.pdf(st.session_state.rec8, height=600, key="recitation_8")
+    with st.expander("Chapter 6 - The Second Law of Thermodynamics"):
+        with open(st.session_state.rec6 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter6Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_6",
+            )
+        st.pdf(st.session_state.rec6, height=600, key="recitation_6")
+
+    with st.expander("Chapter 7 - Entropy"):
+        with open(st.session_state.rec7 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter7Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_7",
+            )
+        st.pdf(st.session_state.rec7, height=600, key="recitation_7")
+
+    with st.expander("Chapter 8 - Cycle"):
+        with open(st.session_state.rec8 , "rb") as file:
+            st.download_button(
+                label="Download PDF",
+                data=file,
+                file_name="thermoChapter8Workshop.pdf",
+                mime="application/pdf",
+                key="download_recitation_8",
+            )
+        st.pdf(st.session_state.rec8, height=600, key="recitation_8")
+
+
+# -----------------------------------------------------------------------------
+# SIDEBAR & AUTHENTICATION
+# -----------------------------------------------------------------------------
+if st.session_state["authenticated"]:
+    rec_update()
+    recitations()
+else:
+    recitations()
+
+
 

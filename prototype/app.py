@@ -177,6 +177,9 @@ def helpful():
         chat.info(st.session_state["prev_input"])
         chat.info(st.session_state.get("output", ""))
 
+def add_latex(symbol):
+    st.session_state["user_text"] = st.session_state.get("user_text", "") + f"${symbol}$"
+
 # -----------------------------------------------------------------------------
 # MAIN PAGE
 # -----------------------------------------------------------------------------
@@ -193,6 +196,12 @@ mode = st.selectbox("Helping Mode", MODES, key="mode")
 
 # Upload Image Section
 uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")
+
+# Symbols Section
+with st.popover("Symbols"):
+    st.button(r"$x^2$", on_click=add_latex, args=(r"x^2",))
+    st.button(r"$\degree$", on_click=add_latex, args=(r"$\degree$",))
+  
 
 # buttons
 col1, col2 = st.columns([1, 5])

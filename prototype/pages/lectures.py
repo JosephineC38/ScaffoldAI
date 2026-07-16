@@ -1,6 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="Lectures", layout="wide")
-st.title("Lectures")
+from instructor_access import account_login
 
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP
@@ -53,50 +52,64 @@ updateSlides = [
 # -----------------------------------------------------------------------------
 # FRONT END FUNCTIONS
 # -----------------------------------------------------------------------------
+st.set_page_config(page_title="Lectures", layout="wide")
+st.title("Lectures")
+account_login()
 
-with st.expander("Slides Update"):
-    st.write("Only for Admin User")
+def lec_update():
+    st.info("🔓 Admin Mode Active.")
+    with st.expander("Slides Update"):
+        for i, col in enumerate(updateSlides):
+            with st.container(border=True):
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.text_input(label=f"Update Chapter {col['SlideNum']} Slides", key=f"chap{col['SlideNum']}Update", placeholder=f"Enter new URL for Chapter {col['SlideNum']} Slides")
+                with col2:
+                    st.button(f"Update Chapter {col['SlideNum']} Slides", key=f"chap{col['SlideNum']}UpdateButton", on_click=lambda i=i: updateSlide(i))
 
-    for i, col in enumerate(updateSlides):
-        with st.container(border=True):
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                st.text_input(label=f"Update Chapter {col['SlideNum']} Slides", key=f"chap{col['SlideNum']}Update", placeholder=f"Enter new URL for Chapter {col['SlideNum']} Slides")
-            with col2:
-                st.button(f"Update Chapter {col['SlideNum']} Slides", key=f"chap{col['SlideNum']}UpdateButton", on_click=lambda i=i: updateSlide(i))
+def lectures():
+    with st.expander("Lecture Quick Views"):
+        st.page_link(st.session_state.chap1, label="Chapter 1 - Introduction and Basic Concepts")
+        st.page_link(st.session_state.chap2, label="Chapter 2 - Energy, Energy Transfer, and General Energy Analysis")
+        st.page_link(st.session_state.chap3, label="Chapter 3 - Properties of Pure Substances")
+        st.page_link(st.session_state.chap4, label="Chapter 4 - Energy Analysis of a Closed System")
+        st.page_link(st.session_state.chap5, label="Chapter 5 - Mass and Energy Analysis of Control Volume")
+        st.page_link(st.session_state.chap6, label="Chapter 6 - The Second Law of Thermodynamics")
+        st.page_link(st.session_state.chap7, label="Chapter 7 - Entropy")
+        st.page_link(st.session_state.chap8, label="Chapter 8 - Cycle")
 
-with st.expander("Lecture Quick Views"):
-    st.page_link(st.session_state.chap1, label="Chapter 1 - Introduction and Basic Concepts")
-    st.page_link(st.session_state.chap2, label="Chapter 2 - Energy, Energy Transfer, and General Energy Analysis")
-    st.page_link(st.session_state.chap3, label="Chapter 3 - Properties of Pure Substances")
-    st.page_link(st.session_state.chap4, label="Chapter 4 - Energy Analysis of a Closed System")
-    st.page_link(st.session_state.chap5, label="Chapter 5 - Mass and Energy Analysis of Control Volume")
-    st.page_link(st.session_state.chap6, label="Chapter 6 - The Second Law of Thermodynamics")
-    st.page_link(st.session_state.chap7, label="Chapter 7 - Entropy")
-    st.page_link(st.session_state.chap8, label="Chapter 8 - Cycle")
+    st.write("---")
 
-st.write("---")
+    with st.expander("Chapter 1 - Introduction and Basic Concepts"):
+        st.iframe(st.session_state.chap1, height=600)
 
-with st.expander("Chapter 1 - Introduction and Basic Concepts"):
-    st.iframe(st.session_state.chap1, height=600)
+    with st.expander("Chapter 2 - Energy, Energy Transfer, and General Energy Analysis"):
+        st.iframe(st.session_state.chap2, height=600)
 
-with st.expander("Chapter 2 - Energy, Energy Transfer, and General Energy Analysis"):
-    st.iframe(st.session_state.chap2, height=600)
+    with st.expander("Chapter 3 - Properties of Pure Substances"):
+        st.iframe(st.session_state.chap3, height=600)
 
-with st.expander("Chapter 3 - Properties of Pure Substances"):
-    st.iframe(st.session_state.chap3, height=600)
+    with st.expander("Chapter 4 - Energy Analysis of a Closed System"):
+        st.iframe(st.session_state.chap4, height=600)
 
-with st.expander("Chapter 4 - Energy Analysis of a Closed System"):
-    st.iframe(st.session_state.chap4, height=600)
+    with st.expander("Chapter 5 - Mass and Energy Analysis of Control Volume"):
+        st.iframe(st.session_state.chap5, height=600)
 
-with st.expander("Chapter 5 - Mass and Energy Analysis of Control Volume"):
-    st.iframe(st.session_state.chap5, height=600)
+    with st.expander("Chapter 6 - The Second Law of Thermodynamics"):
+        st.iframe(st.session_state.chap6, height=600)
 
-with st.expander("Chapter 6 - The Second Law of Thermodynamics"):
-    st.iframe(st.session_state.chap6, height=600)
+    with st.expander("Chapter 7 - Entropy"):
+        st.iframe(st.session_state.chap7, height=600)
 
-with st.expander("Chapter 7 - Entropy"):
-    st.iframe(st.session_state.chap7, height=600)
+    with st.expander("Chapter 8 - Cycle"):
+        st.iframe(st.session_state.chap8, height=600)
 
-with st.expander("Chapter 8 - Cycle"):
-    st.iframe(st.session_state.chap8, height=600)
+
+# -----------------------------------------------------------------------------
+# SIDEBAR & AUTHENTICATION
+# -----------------------------------------------------------------------------
+if st.session_state["authenticated"]:
+    lec_update()
+    lectures()
+else:
+    lectures()
