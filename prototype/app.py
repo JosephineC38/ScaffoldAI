@@ -10,6 +10,7 @@ import json
 import csv
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
+from pylatexenc.latex2text import LatexNodes2Text
 
 # Define file paths for logging within the /eval directory
 LOG_DIR = "prototype/eval"
@@ -103,8 +104,13 @@ if "upload_key" not in st.session_state:
 if "prev_input" not in st.session_state:
     st.session_state.prev_input = ""
 
+if "show_latex" not in st.session_state:
+    st.session_state.show_latex = False
+
+# what does d/dx do in thermo?
 def submit_text():
-    user_input = st.session_state.get("user_text", "").strip()
+    converter = LatexNodes2Text()
+    user_input = converter.latex_to_text(st.session_state.get("user_text", "").strip())
     if user_input:
         response, topic, diagnostics = generate_response(user_input, st.session_state["conversation_history"], st.session_state["mode"])
         st.session_state["output"] = response
@@ -116,7 +122,7 @@ def submit_text():
             "timestamp": timestamp,
             "mode": st.session_state.get("mode", ""),
             "input": user_input,
-            "output": response,
+            "output": converter.latex_to_text(response),
             "topic": topic,
             "classification": diagnostics.get("classification"),
             "reasoning_gap": diagnostics.get("reasoning_gap"),
@@ -138,7 +144,7 @@ def submit_text():
 
         # Display the conversation history in the chat container
         chat.info(user_input)
-        chat.info(response)
+        chat.info(converter.latex_to_text(response))
         st.session_state["prev_input"] = user_input
 
         # Reset user input field after submission
@@ -148,7 +154,6 @@ def submit_text():
 def new_chat():
     st.session_state["user_text"] = ""
     st.session_state["conversation_history"] = []
-    helpful.disabled = True
 
     if os.path.exists(CSV_LOG_PATH):
         with open(CSV_LOG_PATH, "r+") as f:
@@ -177,7 +182,17 @@ def helpful():
         chat.info(st.session_state.get("output", ""))
 
 def add_latex(symbol):
-    st.session_state["user_text"] = st.session_state.get("user_text", "") + f"${symbol}$"
+    st.session_state["user_text"] = st.session_state.get("user_text", "") + symbol
+
+def display_latex():
+    st.session_state.show_latex = not st.session_state.show_latex
+    latex_text = st.session_state.get("user_text", "").strip()
+    if latex_text:
+        if st.session_state.show_latex:
+            with latexCont:
+                st.write(latex_text)
+        else:
+            latexCont.empty()
 
 # -----------------------------------------------------------------------------
 # MAIN PAGE
@@ -189,6 +204,8 @@ st.title("ScaffoldAI")
 
 user_input = st.text_area(key="user_text", label="Type something here...", placeholder="Type something here...", 
                             help="This is a text input field for user interaction.", height="content")
+
+latexCont = st.container()
 
 # Helping Mode Dropdown
 mode = st.selectbox("Helping Mode", [
@@ -202,10 +219,64 @@ mode = st.selectbox("Helping Mode", [
 uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")
 
 # Symbols Section
-with st.popover("Symbols"):
-    st.button(r"$x^2$", on_click=add_latex, args=(r"x^2",))
-    st.button(r"$\degree$", on_click=add_latex, args=(r"$\degree$",))
-  
+colSym1, colSym2, colSym3 = st.columns([1, 1, 14])
+
+with colSym1:
+    with st.popover("Math"):
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.button(r"$\times$", on_click=add_latex, args=(r"$\times$",), width="stretch") # *
+            st.button(r"$x^2$", on_click=add_latex, args=(r"$x^2$",), width="stretch") # x^2
+            st.button("{", on_click=add_latex, args=("{",), width="stretch") # {
+            st.button(r"$\frac{d}{dx}$", on_click=add_latex, args=(r"$\frac{d}{dx}$",), width="stretch") # d/dx
+
+        with col2:
+            st.button(r"$\div$", on_click=add_latex, args=(r"$\div$",), width="stretch")
+            st.button(r"$\frac{a}{b}$", on_click=add_latex, args=(r"$\frac{a}{b}$",), width="stretch") # a/b
+            st.button("}", on_click=add_latex, args=("}",), width="stretch") # }
+            st.button(r"$e^x$", on_click=add_latex, args=(r"$e^x$",), width="stretch") # e^x
+
+        with col3:
+            st.button(r"$-$", on_click=add_latex, args=(r"-",), width="stretch")
+            st.button(r"$\sqrt{x}$", on_click=add_latex, args=(r"$\sqrt{x}$",), width="stretch") # √
+            st.button(r"$($", on_click=add_latex, args=(r"(",), width="stretch") # (
+            st.button(r"$\Sigma$", on_click=add_latex, args=(r"$\Sigma$",), width="stretch") # Σ
+        
+        with col4:
+            st.button(r"$+$", on_click=add_latex, args=(r"+",), width="stretch") # +
+            st.button(r"$x_{n}$", on_click=add_latex, args=(r"x_{n}",), width="stretch") 
+            st.button(r"$)$", on_click=add_latex, args=(r")",), width="stretch") # )
+            st.button(r"$\Delta$", on_click=add_latex, args=(r"$\Delta$",), width="stretch") # Delta
+
+
+with colSym2:
+    with st.popover("Units"):
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.button(r"$\frac{m}{s^2}$", on_click=add_latex, args=(r"$\frac{m}{s^2}$",), width="stretch")
+            st.button(r"${\degree}C$", on_click=add_latex, args=(r"${\degree}C$",), width="stretch")
+            st.button(r"$\frac{g}{cm^3}$", on_click=add_latex, args=(r"$\frac{g}{cm^3}$",), width="stretch")
+
+        with col2:
+            st.button(r"$m^2$", on_click=add_latex, args=(r"$m^2$",), width="stretch")
+            st.button(r"${\degree}F$", on_click=add_latex, args=(r"${\degree}F$",), width="stretch")
+            st.button(r"$\frac{m^3}{kg}$", on_click=add_latex, args=(r"$\frac{m^3}{kg}$",), width="stretch")
+
+        with col3:
+            st.button(r"$\frac{kJ}{kg}$", on_click=add_latex, args=(r"$\frac{kJ}{kg}$",), width="stretch")
+            st.button(r"$K$", on_click=add_latex, args=(r"$K$",), width="stretch")
+            st.button(r"$kPa$", on_click=add_latex, args=(r"$kPa$",), width="stretch")
+
+        with col4:
+            st.button(r"$\frac{kJ}{kg·K}$", on_click=add_latex, args=(r"$\frac{kJ}{kg·K}$",), width="stretch")
+            st.button(r"$kJ$", on_click=add_latex, args=(r"$kJ$",), width="stretch")
+            st.button(r"$N·m$", on_click=add_latex, args=(r"$N·m$",), width="stretch")
+
+
+with colSym3:
+    st.button("Display Latex Format", on_click=display_latex) 
 
 # buttons
 col1, col2 = st.columns([1, 5])
