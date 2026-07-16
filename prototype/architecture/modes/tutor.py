@@ -1,7 +1,7 @@
 import json
 
 from architecture.modes import _shared
-from architecture.two_pass_engine import _verification_context, _call_pass_two_model
+from architecture.modes._shared import _verification_context, _call_pass_two_model
 
 
 def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
@@ -42,5 +42,5 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
       Do not reveal the diagnosis or the correct answer.
       """
 
-  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt)
+  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=200)
   return response_text, confirmed_with_verification
