@@ -1,4 +1,13 @@
+import sys
+from pathlib import Path
 import streamlit as st
+
+# Force Python to find modules in the parent directory
+parent_dir = str(Path(__file__).resolve().parent.parent)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+# Now import the local file safely
 from instructor_access import account_login
 
 # Configure page settings

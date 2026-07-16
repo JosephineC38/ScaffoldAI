@@ -11,6 +11,7 @@ import csv
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
 from pylatexenc.latex2text import LatexNodes2Text
+from architecture.config.modes import MODES
 
 # Define file paths for logging within the /eval directory
 LOG_DIR = "prototype/eval"
@@ -208,12 +209,7 @@ user_input = st.text_area(key="user_text", label="Type something here...", place
 latexCont = st.container()
 
 # Helping Mode Dropdown
-mode = st.selectbox("Helping Mode", [
-    "Concept Explanation",
-    "Step-by-step",
-    "Hint-only",
-    "Check-my-plan"
-], key="mode")
+mode = st.selectbox("Helping Mode", MODES, key="mode")
 
 # Upload Image Section
 uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")

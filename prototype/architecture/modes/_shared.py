@@ -1,4 +1,38 @@
-from architecture.two_pass_engine import _call_pass_two_model
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+from openai import OpenAI
+
+dotenv_path = Path(__file__).parents[3] / ".env"
+load_dotenv(dotenv_path)
+
+API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=API_KEY)
+
+
+def _call_pass_two_model(system_prompt: str, conversation_history: list, pass_two_prompt: str, max_tokens: int = 200) -> str:
+  messages = [{"role": "system", "content": system_prompt}]
+  messages += conversation_history
+  messages.append({"role": "user", "content": pass_two_prompt})
+
+  response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=messages,
+    max_tokens=max_tokens,
+    temperature=0.7
+  )
+  return response.choices[0].message.content
+
+
+def _verification_context(verification: dict) -> str:
+  if not verification:
+    return ""
+  return f"""
+      Independent verification result (for your own awareness — whether/how you
+      may state this outright is still governed by your other instructions):
+      verdict={verification['verdict']}, checked via {verification['tier']} tier,
+      correct_value={verification.get('correct_value')}, reasoning={verification.get('reasoning')}
+      """
 
 
 def conceptual_response(user_input: str, diagnosis: str, topic: str, conversation_history: list, system_prompt: str) -> str:

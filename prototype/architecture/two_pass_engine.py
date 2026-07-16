@@ -44,17 +44,6 @@ def _extract_verification_inputs(user_input: str, conversation_history: list) ->
   return problem_statement, user_input
 
 
-def _verification_context(verification: dict) -> str:
-  if not verification:
-    return ""
-  return f"""
-      Independent verification result (for your own awareness — whether/how you
-      may state this outright is still governed by your other instructions):
-      verdict={verification['verdict']}, checked via {verification['tier']} tier,
-      correct_value={verification.get('correct_value')}, reasoning={verification.get('reasoning')}
-      """
-
-
 def pass_one(user_input: str, conversation_history: list):
   history_text = _format_history_for_pass_one(conversation_history)
 
@@ -98,26 +87,11 @@ def pass_one(user_input: str, conversation_history: list):
 
   return topic, json.dumps(diagnosis)
 
-def _call_pass_two_model(system_prompt: str, conversation_history: list, pass_two_prompt: str) -> str:
-  messages = [{"role": "system", "content": system_prompt}]
-  messages += conversation_history
-  messages.append({"role": "user", "content": pass_two_prompt})
-
-  response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=messages,
-    max_tokens=200,
-    temperature=0.7
-  )
-  return response.choices[0].message.content
-
-
-# Imported here (after _verification_context/_call_pass_two_model are defined
-# above) rather than at module top — architecture.modes.tutor,
-# architecture.modes.hint_only, and architecture.modes.concept_explanation all
-# import those two names back from this module, so importing them before
-# those names exist on this partially-initialized module would raise a
-# circular-import ImportError.
+# _call_pass_two_model/_verification_context now live in architecture.modes._shared
+# (mode-neutral, imported by both this module and the mode handler files) rather
+# than here, so this module and the mode handler files no longer import from each
+# other in both directions — see architecture/modes/_shared.py.
+from architecture.modes._shared import _call_pass_two_model, _verification_context
 from architecture.modes import tutor
 from architecture.modes import hint_only
 from architecture.modes import concept_explanation
