@@ -3,10 +3,12 @@ import re
 import ast
 import json
 import operator
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture.config.topic_reference import get_reference
+from architecture.cost_log import log_cost_event
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -169,6 +171,7 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
     }}
     """
 
+    t0 = time.perf_counter()
     completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
@@ -176,6 +179,7 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
         temperature=0.2,
         response_format={"type": "json_object"},
     )
+    log_cost_event("verification_semantic", "gpt-4o", completion, time.perf_counter() - t0)
     result = json.loads(completion.choices[0].message.content)
 
     # The model's own "verdict" field has been observed to disagree with its own

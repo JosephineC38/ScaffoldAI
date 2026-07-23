@@ -1,8 +1,10 @@
 import os
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture.config.leakage_patterns import ALL_PHRASES
+from architecture.cost_log import log_cost_event
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -30,6 +32,7 @@ def pass_three(leaked_response: str, topic: str) -> str: # only called if output
     Do not confirm or deny correctness. Do not include calculations or final values.
     Return only the rewritten response.
   """
+  t0 = time.perf_counter()
   pass_three_response = client.chat.completions.create(
     model = "gpt-4o-mini", # $0.15/million input tokens, $0.60/million output tokens
     messages=[
@@ -39,5 +42,6 @@ def pass_three(leaked_response: str, topic: str) -> str: # only called if output
     max_tokens=200,
     temperature=0.7
   )
+  log_cost_event("leakage_sanitize", "gpt-4o-mini", pass_three_response, time.perf_counter() - t0)
 
   return pass_three_response.choices[0].message.content

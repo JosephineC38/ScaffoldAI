@@ -8,7 +8,7 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
   classification = json.loads(diagnosis).get("classification")
 
   if classification == "CONCEPTUAL":
-    response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt)
+    response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt, mode="Hint-only")
     return response_text, True
 
   # This mode never takes a direct-verdict path — CONFIRMATION, IPS, and IRL
@@ -25,5 +25,5 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
       Do not reveal the diagnosis or the correct answer.
       """
 
-  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt)
+  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, mode="Hint-only")
   return response_text, False

@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -7,6 +8,7 @@ from architecture import prompt_builder
 from architecture.config.thermo_topics import TOPICS
 from architecture.leakage_check import contains_phrase, pass_three
 from architecture.verification import verify_answer, contains_stated_answer
+from architecture.cost_log import log_cost_event
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -44,7 +46,7 @@ def _extract_verification_inputs(user_input: str, conversation_history: list) ->
   return problem_statement, user_input
 
 
-def pass_one(user_input: str, conversation_history: list):
+def pass_one(user_input: str, conversation_history: list, mode: str = ""):
   history_text = _format_history_for_pass_one(conversation_history)
 
   pass_one_prompt = f"""
@@ -71,6 +73,7 @@ def pass_one(user_input: str, conversation_history: list):
     Do NOT include the correct answer. Respond only with structured diagnostic. Your output will not be shown to the student
     """
 
+  t0 = time.perf_counter()
   pass_one_analysis = client.chat.completions.create(
     model = "gpt-4o-mini", # $0.15/million input tokens, $0.60/million output tokens
     messages=[
@@ -81,6 +84,7 @@ def pass_one(user_input: str, conversation_history: list):
     temperature=0.1, # low creativity output
     response_format={"type": "json_object"},
   )
+  log_cost_event("pass1_classification", "gpt-4o-mini", pass_one_analysis, time.perf_counter() - t0, mode=mode)
 
   diagnosis = json.loads(pass_one_analysis.choices[0].message.content)
   topic = diagnosis.pop("topic")
@@ -110,7 +114,7 @@ def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_
   return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt)
 
 def generate_response(user_input: str, conversation_history, mode: str):
-  topic, diagnosis = pass_one(user_input, conversation_history)
+  topic, diagnosis = pass_one(user_input, conversation_history, mode)
   classification = json.loads(diagnosis).get("classification")
 
   # Run answer verification whenever the student appears to have a specific
