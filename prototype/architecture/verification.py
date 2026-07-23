@@ -124,7 +124,7 @@ def _extract_number(text) -> float:
         return None
 
 
-def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> dict:
+def _semantic_check(problem_statement: str, student_answer: str, topic: str, conversation_id: str = "", turn: str = "") -> dict:
     reference = get_reference(topic)
 
     # Explicitly scaffolds "who is the system / which direction is work or heat
@@ -179,7 +179,7 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
         temperature=0.2,
         response_format={"type": "json_object"},
     )
-    log_cost_event("verification_semantic", "gpt-4o", completion, time.perf_counter() - t0)
+    log_cost_event("verification_semantic", "gpt-4o", completion, time.perf_counter() - t0, conversation_id=conversation_id, turn=turn)
     result = json.loads(completion.choices[0].message.content)
 
     # The model's own "verdict" field has been observed to disagree with its own
@@ -212,7 +212,7 @@ def _last_stated_number(text: str):
 
 
 # combined verdict
-def verify_answer(problem_statement: str, student_answer: str, topic: str) -> dict:
+def verify_answer(problem_statement: str, student_answer: str, topic: str, conversation_id: str = "", turn: str = "") -> dict:
     """Check a student's stated answer against static reference material —
     deliberately does NOT take conversation_history, so it can't inherit
     drift from the tutor's own earlier (possibly wrong) turns in this
@@ -223,7 +223,7 @@ def verify_answer(problem_statement: str, student_answer: str, topic: str) -> di
               "correct_value": ..., "reasoning": ...}
     """
     arithmetic = _check_arithmetic(student_answer)
-    semantic = _semantic_check(problem_statement, student_answer, topic)
+    semantic = _semantic_check(problem_statement, student_answer, topic, conversation_id=conversation_id, turn=turn)
 
     if arithmetic["tier_result"] == "ARITHMETIC_ERROR":
         if semantic.get("verdict") == "CORRECT":

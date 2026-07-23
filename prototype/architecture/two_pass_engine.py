@@ -46,7 +46,7 @@ def _extract_verification_inputs(user_input: str, conversation_history: list) ->
   return problem_statement, user_input
 
 
-def pass_one(user_input: str, conversation_history: list, mode: str = ""):
+def pass_one(user_input: str, conversation_history: list, mode: str = "", conversation_id: str = "", turn: str = ""):
   history_text = _format_history_for_pass_one(conversation_history)
 
   pass_one_prompt = f"""
@@ -84,7 +84,7 @@ def pass_one(user_input: str, conversation_history: list, mode: str = ""):
     temperature=0.1, # low creativity output
     response_format={"type": "json_object"},
   )
-  log_cost_event("pass1_classification", "gpt-4o-mini", pass_one_analysis, time.perf_counter() - t0, mode=mode)
+  log_cost_event("pass1_classification", "gpt-4o-mini", pass_one_analysis, time.perf_counter() - t0, mode=mode, conversation_id=conversation_id, turn=turn)
 
   diagnosis = json.loads(pass_one_analysis.choices[0].message.content)
   topic = diagnosis.pop("topic")
@@ -106,15 +106,15 @@ MODE_HANDLERS = {
   "Concept Explanation": concept_explanation.handle,
 }
 
-def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None):
+def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None, conversation_id: str = "", turn: str = ""):
   system_prompt = prompt_builder.prompt_builder()
   handler = MODE_HANDLERS.get(mode)
   if handler is None:
     raise NotImplementedError(f"Mode '{mode}' not yet implemented")
-  return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt)
+  return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt, conversation_id=conversation_id, turn=turn)
 
-def generate_response(user_input: str, conversation_history, mode: str):
-  topic, diagnosis = pass_one(user_input, conversation_history, mode)
+def generate_response(user_input: str, conversation_history, mode: str, conversation_id: str = "", turn: str = ""):
+  topic, diagnosis = pass_one(user_input, conversation_history, mode, conversation_id=conversation_id, turn=turn)
   classification = json.loads(diagnosis).get("classification")
 
   # Run answer verification whenever the student appears to have a specific
@@ -125,12 +125,12 @@ def generate_response(user_input: str, conversation_history, mode: str):
   verification = None
   if classification == "CONFIRMATION" or contains_stated_answer(user_input):
     problem_statement, student_answer = _extract_verification_inputs(user_input, conversation_history)
-    verification = verify_answer(problem_statement, student_answer, topic)
+    verification = verify_answer(problem_statement, student_answer, topic, conversation_id=conversation_id, turn=turn)
 
-  system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification)
+  system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification, conversation_id=conversation_id, turn=turn)
 
   if not gave_direct_answer and contains_phrase(system_response):
-    system_response = pass_three(system_response, topic)
+    system_response = pass_three(system_response, topic, conversation_id=conversation_id, turn=turn)
 
   diagnostics = json.loads(diagnosis)
   if verification:

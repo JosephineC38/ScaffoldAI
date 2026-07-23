@@ -17,7 +17,7 @@ def contains_phrase(text: str) -> bool:
   text_lower = text.lower()
   return any(phrase in text_lower for phrase in ALL_PHRASES)
 
-def pass_three(leaked_response: str, topic: str) -> str: # only called if output detects answer leakage
+def pass_three(leaked_response: str, topic: str, conversation_id: str = "", turn: str = "") -> str: # only called if output detects answer leakage
   pass_three_prompt = f""" 
     The following tutoring response contains direct answers or answer-revealing 
     language that must be removed. Rewrite it to preserve the Socratic scaffolding 
@@ -42,6 +42,6 @@ def pass_three(leaked_response: str, topic: str) -> str: # only called if output
     max_tokens=200,
     temperature=0.7
   )
-  log_cost_event("leakage_sanitize", "gpt-4o-mini", pass_three_response, time.perf_counter() - t0)
+  log_cost_event("leakage_sanitize", "gpt-4o-mini", pass_three_response, time.perf_counter() - t0, conversation_id=conversation_id, turn=turn)
 
   return pass_three_response.choices[0].message.content

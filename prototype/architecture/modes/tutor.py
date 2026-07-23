@@ -4,11 +4,11 @@ from architecture.modes import _shared
 from architecture.modes._shared import _verification_context, _call_pass_two_model
 
 
-def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
+def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str, conversation_id: str = "", turn: str = "") -> tuple[str, bool]:
   classification = json.loads(diagnosis).get("classification")
 
   if classification == "CONCEPTUAL":
-    response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt, mode="Tutor")
+    response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt, mode="Tutor", conversation_id=conversation_id, turn=turn)
     return response_text, True
 
   # Only take the direct-verdict path when we have a trustworthy (non-uncertain)
@@ -42,5 +42,5 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
       Do not reveal the diagnosis or the correct answer.
       """
 
-  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=200, mode="Tutor")
+  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=200, mode="Tutor", conversation_id=conversation_id, turn=turn)
   return response_text, confirmed_with_verification
