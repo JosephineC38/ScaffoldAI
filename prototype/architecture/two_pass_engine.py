@@ -1,12 +1,15 @@
 import os
 import json
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture import prompt_builder
 from architecture.config.thermo_topics import TOPICS
-from architecture.leakage_check import contains_phrase, pass_three
+from architecture.leakage_check import contains_phrase, phrase_matches, contains_numeric_value, pass_three
+from architecture.leakage_eval_log import log_leakage_eval
 from architecture.verification import verify_answer, contains_stated_answer
+from architecture.cost_log import log_cost_event
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -44,7 +47,7 @@ def _extract_verification_inputs(user_input: str, conversation_history: list) ->
   return problem_statement, user_input
 
 
-def pass_one(user_input: str, conversation_history: list):
+def pass_one(user_input: str, conversation_history: list, mode: str = "", conversation_id: str = "", turn: str = ""):
   history_text = _format_history_for_pass_one(conversation_history)
 
   pass_one_prompt = f"""
@@ -71,6 +74,7 @@ def pass_one(user_input: str, conversation_history: list):
     Do NOT include the correct answer. Respond only with structured diagnostic. Your output will not be shown to the student
     """
 
+  t0 = time.perf_counter()
   pass_one_analysis = client.chat.completions.create(
     model = "gpt-4o-mini", # $0.15/million input tokens, $0.60/million output tokens
     messages=[
@@ -81,6 +85,7 @@ def pass_one(user_input: str, conversation_history: list):
     temperature=0.1, # low creativity output
     response_format={"type": "json_object"},
   )
+  log_cost_event("pass1_classification", "gpt-4o-mini", pass_one_analysis, time.perf_counter() - t0, mode=mode, conversation_id=conversation_id, turn=turn)
 
   diagnosis = json.loads(pass_one_analysis.choices[0].message.content)
   topic = diagnosis.pop("topic")
@@ -102,15 +107,15 @@ MODE_HANDLERS = {
   "Concept Explanation": concept_explanation.handle,
 }
 
-def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None):
+def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None, conversation_id: str = "", turn: str = ""):
   system_prompt = prompt_builder.prompt_builder()
   handler = MODE_HANDLERS.get(mode)
   if handler is None:
     raise NotImplementedError(f"Mode '{mode}' not yet implemented")
-  return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt)
+  return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt, conversation_id=conversation_id, turn=turn)
 
-def generate_response(user_input: str, conversation_history, mode: str):
-  topic, diagnosis = pass_one(user_input, conversation_history)
+def generate_response(user_input: str, conversation_history, mode: str, conversation_id: str = "", turn: str = ""):
+  topic, diagnosis = pass_one(user_input, conversation_history, mode, conversation_id=conversation_id, turn=turn)
   classification = json.loads(diagnosis).get("classification")
 
   # Run answer verification whenever the student appears to have a specific
@@ -121,12 +126,17 @@ def generate_response(user_input: str, conversation_history, mode: str):
   verification = None
   if classification == "CONFIRMATION" or contains_stated_answer(user_input):
     problem_statement, student_answer = _extract_verification_inputs(user_input, conversation_history)
-    verification = verify_answer(problem_statement, student_answer, topic)
+    verification = verify_answer(problem_statement, student_answer, topic, conversation_id=conversation_id, turn=turn)
 
-  system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification)
+  system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification, conversation_id=conversation_id, turn=turn)
 
-  if not gave_direct_answer and contains_phrase(system_response):
-    system_response = pass_three(system_response, topic)
+  if not gave_direct_answer:
+    phrase_flagged = contains_phrase(system_response)
+    numeric_flagged, numeric_match_list = contains_numeric_value(system_response)
+    log_leakage_eval(conversation_id, turn, mode, phrase_flagged, phrase_matches(system_response),
+                      numeric_flagged, numeric_match_list, system_response)
+    if phrase_flagged:
+      system_response = pass_three(system_response, topic, conversation_id=conversation_id, turn=turn)
 
   diagnostics = json.loads(diagnosis)
   if verification:

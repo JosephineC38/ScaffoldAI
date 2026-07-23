@@ -3,7 +3,7 @@ import json
 from architecture.modes._shared import _verification_context, _call_pass_two_model
 
 
-def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
+def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str, conversation_id: str = "", turn: str = "") -> tuple[str, bool]:
   classification = json.loads(diagnosis).get("classification")
 
   if classification == "CONCEPTUAL":
@@ -16,7 +16,7 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
 
       State the explanation directly instead of responding with a question. Do not end your response with a question — if you want to invite further engagement, do it as a statement, not a question.
       """
-    response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400)
+    response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400, mode="Concept Explanation", conversation_id=conversation_id, turn=turn)
     # ASSUMPTION FLAGGED FOR REVIEW: gave_direct_answer=True here on the
     # reasoning that a bare conceptual question has no student-specific number
     # to leak. Confirm before merging; if wrong, this should be False like the
@@ -34,7 +34,7 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
 
       Do not reveal the diagnosis, and do not state whether their specific number is right or wrong.
       """
-    response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400)
+    response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400, mode="Concept Explanation", conversation_id=conversation_id, turn=turn)
     return response_text, False
 
   # IPS / IRL
@@ -47,5 +47,5 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
 
       Do not reveal the diagnosis or the correct answer.
       """
-  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400)
+  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=400, mode="Concept Explanation", conversation_id=conversation_id, turn=turn)
   return response_text, False
