@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from architecture import prompt_builder
 from architecture.config.thermo_topics import TOPICS
-from architecture.leakage_check import contains_phrase, pass_three
+from architecture.leakage_check import contains_phrase, phrase_matches, contains_numeric_value, pass_three
+from architecture.leakage_eval_log import log_leakage_eval
 from architecture.verification import verify_answer, contains_stated_answer
 from architecture.cost_log import log_cost_event
 
@@ -129,8 +130,13 @@ def generate_response(user_input: str, conversation_history, mode: str, conversa
 
   system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification, conversation_id=conversation_id, turn=turn)
 
-  if not gave_direct_answer and contains_phrase(system_response):
-    system_response = pass_three(system_response, topic, conversation_id=conversation_id, turn=turn)
+  if not gave_direct_answer:
+    phrase_flagged = contains_phrase(system_response)
+    numeric_flagged, numeric_match_list = contains_numeric_value(system_response)
+    log_leakage_eval(conversation_id, turn, mode, phrase_flagged, phrase_matches(system_response),
+                      numeric_flagged, numeric_match_list, system_response)
+    if phrase_flagged:
+      system_response = pass_three(system_response, topic, conversation_id=conversation_id, turn=turn)
 
   diagnostics = json.loads(diagnosis)
   if verification:
