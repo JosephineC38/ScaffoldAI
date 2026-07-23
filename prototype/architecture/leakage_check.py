@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture.config.leakage_patterns import ALL_PHRASES
+from architecture.testing.cost_tracker import turn_usage
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -39,5 +40,7 @@ def pass_three(leaked_response: str, topic: str) -> str: # only called if output
     max_tokens=200,
     temperature=0.7
   )
+
+  turn_usage.record("gpt-4o-mini", pass_three_response.usage.prompt_tokens, pass_three_response.usage.completion_tokens)
 
   return pass_three_response.choices[0].message.content

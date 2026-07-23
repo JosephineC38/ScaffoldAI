@@ -7,6 +7,7 @@ from architecture import prompt_builder
 from architecture.config.thermo_topics import TOPICS
 from architecture.leakage_check import contains_phrase, pass_three
 from architecture.verification import verify_answer, contains_stated_answer
+from architecture.testing.cost_tracker import turn_usage
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -14,11 +15,11 @@ load_dotenv(dotenv_path)
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
 
-PASS_ONE_HISTORY_WINDOW = 8  # last N messages (not exchanges) of conversation_history
+from architecture.modes._shared import CONVERSATION_HISTORY_WINDOW
 
 
 def _format_history_for_pass_one(conversation_history: list) -> str:
-  recent = conversation_history[-PASS_ONE_HISTORY_WINDOW:]
+  recent = conversation_history[-CONVERSATION_HISTORY_WINDOW:]
   if not recent:
     return "(no prior turns in this conversation)"
   return "\n".join(
@@ -82,6 +83,8 @@ def pass_one(user_input: str, conversation_history: list):
     response_format={"type": "json_object"},
   )
 
+  turn_usage.record("gpt-4o-mini", pass_one_analysis.usage.prompt_tokens, pass_one_analysis.usage.completion_tokens)
+
   diagnosis = json.loads(pass_one_analysis.choices[0].message.content)
   topic = diagnosis.pop("topic")
 
@@ -110,6 +113,8 @@ def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_
   return handler(user_input, pass_one_diagnosis, topic, conversation_history, verification, system_prompt)
 
 def generate_response(user_input: str, conversation_history, mode: str):
+  turn_usage.reset()
+
   topic, diagnosis = pass_one(user_input, conversation_history)
   classification = json.loads(diagnosis).get("classification")
 
@@ -132,5 +137,8 @@ def generate_response(user_input: str, conversation_history, mode: str):
   if verification:
     diagnostics["verification_verdict"] = verification.get("verdict")
     diagnostics["verification_tier"] = verification.get("tier")
+
+  diagnostics["total_tokens"] = turn_usage.total_tokens
+  diagnostics["total_cost_usd"] = turn_usage.total_cost_usd
 
   return system_response, topic, diagnostics
