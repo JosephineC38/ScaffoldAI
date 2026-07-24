@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,6 +16,74 @@ API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
 
 PASS_ONE_HISTORY_WINDOW = 8  # last N messages (not exchanges) of conversation_history
+
+
+# --- Deterministic IRL->CONCEPTUAL override -------------------------------
+# pass_one's CONCEPTUAL rubric requires the student to be "asking for a
+# definition, law, formula, or terminology directly" — a bare "why does X
+# hold" / "what is X used for" question with no problem context doesn't
+# literally fit that phrasing, so it falls to IRL instead. Tutor's IRL branch
+# has no fallback for "no student attempt to scaffold around" (see
+# tutor.py), so it produces a bare Socratic question with no real answer.
+# This heuristic runs after pass_one and before dispatch (see
+# generate_response) to catch that case without touching pass_one's prompt
+# or any individual mode handler.
+#
+# has_problem_context() require either a decimal number, a 2+ digit number
+# (word-boundary bounded, so "Q11" inside a question id never matches — see
+# _MULTI_DIGIT_NUMBER), a unit/quantity keyword directly adjacent to a
+# number, or problem-reference phrasing ("stuck on", "this problem", "how do
+# I approach") that signals a specific-but-unquantified problem is in view
+# (e.g. "I'm stuck on a Carnot efficiency problem" should stay IRL and get
+# Socratic scaffolding, not a bare definition dump).
+
+_DECIMAL_NUMBER = re.compile(r'\b\d+\.\d+\b')
+_MULTI_DIGIT_NUMBER = re.compile(r'\b\d{2,}\b')
+
+_UNIT_KEYWORDS = (
+  'kpa', 'mpa', 'gpa', 'pa', 'kj', 'mj', 'j', 'kg', 'kmol', 'mol',
+  'bar', 'atm', 'kw', 'rpm', 'm3', 'm³', '°c', '°f',
+)
+_UNIT_NEAR_NUMBER = re.compile(
+  r'\b\d+(?:\.\d+)?\s*(?:' + '|'.join(re.escape(u) for u in _UNIT_KEYWORDS) + r')\b',
+  re.IGNORECASE,
+)
+# Short/single-letter units (K, C, F, g, L, W, s, h, min, hr) are only
+# treated as unit evidence when a number sits directly next to them, since
+# these letters are common enough on their own to false-positive otherwise.
+_SHORT_UNIT_NEAR_NUMBER = re.compile(
+  r'\b\d+(?:\.\d+)?\s*(?:k|c|f|g|l|w|s|h|min|hr)\b',
+  re.IGNORECASE,
+)
+
+_PROBLEM_REFERENCE_PHRASES = (
+  'stuck on', 'stuck with', "don't know where to start", "do not know where to start",
+  'where to start', 'how do i approach', 'how do i start', 'how do i even',
+  "i've never done", "i have never done", 'help me start',
+  'my problem', 'this problem', 'the problem', 'a problem where', 'a problem in which',
+  'given that', 'given the following', 'given:',
+)
+
+
+def has_problem_context(conversation_history: list, current_message: str) -> bool:
+  """True if the current message or the same rolling window pass_one saw
+  contains evidence of an actual problem in view (numeric values, units, or
+  given-quantity/problem-reference phrasing) rather than a bare factual ask."""
+  recent = conversation_history[-PASS_ONE_HISTORY_WINDOW:]
+  scope_text = " ".join(turn["content"] for turn in recent) + " " + current_message
+  scope_lower = scope_text.lower()
+
+  if _DECIMAL_NUMBER.search(scope_text):
+    return True
+  if _MULTI_DIGIT_NUMBER.search(scope_text):
+    return True
+  if _UNIT_NEAR_NUMBER.search(scope_text):
+    return True
+  if _SHORT_UNIT_NEAR_NUMBER.search(scope_text):
+    return True
+  if any(phrase in scope_lower for phrase in _PROBLEM_REFERENCE_PHRASES):
+    return True
+  return False
 
 
 def _format_history_for_pass_one(conversation_history: list) -> str:
@@ -111,7 +180,16 @@ def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_
 
 def generate_response(user_input: str, conversation_history, mode: str):
   topic, diagnosis = pass_one(user_input, conversation_history)
-  classification = json.loads(diagnosis).get("classification")
+  diagnosis_dict = json.loads(diagnosis)
+  classification = diagnosis_dict.get("classification")
+
+  # Deterministic override, scoped to IRL only (IPS/CONFIRMATION already
+  # require an existing attempt/result in view per their own pass_one rules,
+  # so they're left untouched). See has_problem_context() above for why.
+  if classification == "IRL" and not has_problem_context(conversation_history, user_input):
+    classification = "CONCEPTUAL"
+    diagnosis_dict["classification"] = classification
+    diagnosis = json.dumps(diagnosis_dict)
 
   # Run answer verification whenever the student appears to have a specific
   # result on the table — primarily driven by the CONFIRMATION classification,
