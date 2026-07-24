@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture.config.topic_reference import get_reference
+from architecture.testing.cost_tracker import turn_usage
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -176,6 +177,8 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
         temperature=0.2,
         response_format={"type": "json_object"},
     )
+    turn_usage.record("gpt-4o", completion.usage.prompt_tokens, completion.usage.completion_tokens)
+
     result = json.loads(completion.choices[0].message.content)
 
     # The model's own "verdict" field has been observed to disagree with its own

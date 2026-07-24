@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+from architecture.testing.cost_tracker import turn_usage
 
 dotenv_path = Path(__file__).parents[3] / ".env"
 load_dotenv(dotenv_path)
@@ -9,18 +10,21 @@ load_dotenv(dotenv_path)
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
 
+CONVERSATION_HISTORY_WINDOW = 8  # last N messages (not exchanges) of conversation_history; shared by Pass 1 and Pass 2
+
 
 def _call_pass_two_model(system_prompt: str, conversation_history: list, pass_two_prompt: str, max_tokens: int = 200) -> str:
   messages = [{"role": "system", "content": system_prompt}]
-  messages += conversation_history
+  messages += conversation_history[-CONVERSATION_HISTORY_WINDOW:]
   messages.append({"role": "user", "content": pass_two_prompt})
 
   response = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-4o",
     messages=messages,
     max_tokens=max_tokens,
     temperature=0.7
   )
+  turn_usage.record("gpt-4o", response.usage.prompt_tokens, response.usage.completion_tokens)
   return response.choices[0].message.content
 
 
