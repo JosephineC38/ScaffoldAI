@@ -97,6 +97,7 @@ def _format_history_for_pass_one(conversation_history: list) -> str:
   )
 
 
+PASS_ONE_HISTORY_WINDOW = CONVERSATION_HISTORY_WINDOW  # window has_problem_context() scans; shares pass_one's history window
 VERIFICATION_LOOKBACK = 6  # last N messages of conversation_history to scan for prior problem context
 
 
