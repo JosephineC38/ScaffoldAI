@@ -42,5 +42,5 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
       Do not reveal the diagnosis or the correct answer.
       """
 
-  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=200)
+  response_text = _call_pass_two_model(system_prompt, conversation_history, pass_two_prompt, max_tokens=1000)
   return response_text, confirmed_with_verification
