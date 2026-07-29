@@ -1,7 +1,6 @@
 import streamlit as st
 import os
-from instructor_access import account_login
-
+from instructor_access import account_login, admin_sidebar, user_sidebar
 
 # Define file paths for recitation files
 REC_DIR = "prototype/materials/recitations"
@@ -66,7 +65,6 @@ def updateRecitation(recIdx):
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Recitation", layout="wide")
 st.title("Recitations")
-account_login()
 
 def rec_update():
     st.info("🔓 Admin Mode Active.")
@@ -81,7 +79,6 @@ def rec_update():
                     st.button("Upload Recitation", key=f"rec{chapter_num}UpdateButton", on_click=lambda i=i: updateRecitation(int(i[1]['RecNum'])))
                     
     st.write("---")
-
 
 def recitations():
     with st.expander("Chapter 1 - Introduction and Basic Concepts"):
@@ -177,11 +174,17 @@ def recitations():
 # -----------------------------------------------------------------------------
 # SIDEBAR & AUTHENTICATION
 # -----------------------------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+    
 if st.session_state["authenticated"]:
     rec_update()
     recitations()
+    admin_sidebar()
 else:
     recitations()
+    user_sidebar()
+account_login()
 
 
 

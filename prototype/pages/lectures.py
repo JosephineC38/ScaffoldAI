@@ -1,5 +1,5 @@
 import streamlit as st
-from instructor_access import account_login
+from instructor_access import account_login, admin_sidebar, user_sidebar
 
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP
@@ -28,16 +28,6 @@ if 'chap7' not in st.session_state:
 if 'chap8' not in st.session_state:
     st.session_state.chap8 = 'https://docs.google.com/presentation/d/1IzhqDLa1wpXjDWzOHHvbyFaN0i9SWoFQ/edit?slide=id.p1#slide=id.p1'
 
-
-def updateSlide(chapter_index):
-    slide_key = f"chap{chapter_index + 1}Update"
-    new_url = st.session_state.get(slide_key, "")
-    if new_url:
-        st.session_state[f"chap{chapter_index + 1}"] = new_url
-        st.success(f"Chapter {chapter_index + 1} slides updated successfully!")
-    else:
-        st.warning(f"Please enter a valid URL for Chapter {chapter_index + 1} slides.")
-
 updateSlides = [
     {"SlideNum": "1", "desc": "Review recent class slides & notes."},
     {"SlideNum": "2", "desc": "Review recent class slides & notes."},
@@ -52,9 +42,20 @@ updateSlides = [
 # -----------------------------------------------------------------------------
 # FRONT END FUNCTIONS
 # -----------------------------------------------------------------------------
+def updateSlide(chapter_index):
+    slide_key = f"chap{chapter_index + 1}Update"
+    new_url = st.session_state.get(slide_key, "")
+    if new_url:
+        st.session_state[f"chap{chapter_index + 1}"] = new_url
+        st.success(f"Chapter {chapter_index + 1} slides updated successfully!")
+    else:
+        st.warning(f"Please enter a valid URL for Chapter {chapter_index + 1} slides.")
+
+# -----------------------------------------------------------------------------
+# LECTURES PAGE
+# -----------------------------------------------------------------------------
 st.set_page_config(page_title="Lectures", layout="wide")
 st.title("Lectures")
-account_login()
 
 def lec_update():
     st.info("🔓 Admin Mode Active.")
@@ -104,12 +105,17 @@ def lectures():
     with st.expander("Chapter 8 - Cycle"):
         st.iframe(st.session_state.chap8, height=600)
 
-
 # -----------------------------------------------------------------------------
 # SIDEBAR & AUTHENTICATION
 # -----------------------------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
 if st.session_state["authenticated"]:
     lec_update()
     lectures()
+    admin_sidebar()
 else:
     lectures()
+    user_sidebar()
+account_login()

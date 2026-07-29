@@ -8,18 +8,24 @@ import sys
 import os
 import json
 import csv
+import time
+import secrets
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
+import instructor_access
 from pylatexenc.latex2text import LatexNodes2Text
 from architecture.config.modes import MODES
 
-# Define file paths for logging within the /eval directory
+# Define file paths for logging within the /eval directory & for symbols
 LOG_DIR = "prototype/eval"
 CSV_LOG_PATH = os.path.join(LOG_DIR, "activity_log.csv")
 JSON_LOG_PATH = os.path.join(LOG_DIR, "activity_log.json")
+SYMBOLS_PATH = os.path.join("thermo_pack", "symbols.json")
 
 # Ensure the eval directory exists
 os.makedirs(LOG_DIR, exist_ok=True)
+
+AUTO_LOGOUT_SECONDS = 3600 #1 hour 
 
 # -----------------------------------------------------------------------------
 # LOGGING FUNCTIONS
@@ -108,8 +114,19 @@ if "prev_input" not in st.session_state:
 if "show_latex" not in st.session_state:
     st.session_state.show_latex = False
 
-# what does d/dx do in thermo?
+# Current Session Key
+if "curr_chat_session" not in st.session_state:
+    st.session_state.curr_chat_session = secrets.token_urlsafe(32)
+
+if "last_activity" not in st.session_state:
+    st.session_state.last_activity = int(time.time())
+
+def session_expired():
+    return int(time.time()) - st.session_state.last_activity > AUTO_LOGOUT_SECONDS
+
 def submit_text():
+    if session_expired():
+        return  # session timed out; main flow will log out on this rerun
     converter = LatexNodes2Text()
     user_input = converter.latex_to_text(st.session_state.get("user_text", "").strip())
     if user_input:
@@ -130,22 +147,21 @@ def submit_text():
             "misconception": diagnostics.get("misconception"),
             "verification_verdict": diagnostics.get("verification_verdict"),
             "verification_tier": diagnostics.get("verification_tier"),
-            "helpful": None
+            "helpful": None,
+            "current_chat_session": st.session_state.curr_chat_session
         }
         log_to_csv(log)
         log_to_json(log)
         st.session_state["last_log_timestamp"] = timestamp
 
         # Image to log if uploaded
+        uploaded_file = st.session_state.get(str(st.session_state.upload_key))
         if uploaded_file is not None:
             image_path = os.path.join(LOG_DIR, uploaded_file.name)
             with open(image_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             log["uploaded_image"] = image_path
 
-        # Display the conversation history in the chat container
-        chat.info(user_input)
-        chat.info(converter.latex_to_text(response))
         st.session_state["prev_input"] = user_input
 
         # Reset user input field after submission
@@ -153,190 +169,234 @@ def submit_text():
 
 # Clear the chat history
 def new_chat():
+    if session_expired():
+        return  
     st.session_state["user_text"] = ""
     st.session_state["conversation_history"] = []
+    st.session_state["last_helpful"] = False
+    st.session_state["output"] = ""
 
-    if os.path.exists(CSV_LOG_PATH):
-        with open(CSV_LOG_PATH, "r+") as f:
-            f.seek(0)
-            f.truncate()
+    if st.session_state.curr_chat_session and os.path.isfile(CSV_LOG_PATH):
+        with open(CSV_LOG_PATH, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames
+            rows = [r for r in reader if r.get("current_chat_session") != st.session_state.curr_chat_session]
+        if fieldnames:
+            with open(CSV_LOG_PATH, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
 
-    if os.path.exists(JSON_LOG_PATH):
-        with open(JSON_LOG_PATH, "r+") as f:
-            f.seek(0)
-            f.truncate()
+    if st.session_state.curr_chat_session and os.path.isfile(JSON_LOG_PATH):
+        try:
+            with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        except json.JSONDecodeError:
+            logs = []
+        logs = [e for e in logs if e.get("current_chat_session") != st.session_state.curr_chat_session]
+        with open(JSON_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=4)
     
     for file in os.listdir(LOG_DIR):
         if file.endswith((".png", ".jpg", ".jpeg")):
             os.remove(os.path.join(LOG_DIR, file))
             print(f"Deleted: {file}")
+    
 
 # Mark as helpful
 def helpful():
+    if session_expired():
+        return 
     last_timestamp = st.session_state.get("last_log_timestamp")
     if last_timestamp:
         mark_helpful(last_timestamp)
         st.session_state["last_helpful"] = True
-        helpfulCont.success("Logged as helpful.")
-
-        chat.info(st.session_state["prev_input"])
-        chat.info(st.session_state.get("output", ""))
 
 def add_latex(symbol):
     st.session_state["user_text"] = st.session_state.get("user_text", "") + symbol
 
 def display_latex():
     st.session_state.show_latex = not st.session_state.show_latex
-    latex_text = st.session_state.get("user_text", "").strip()
-    if latex_text:
-        if st.session_state.show_latex:
-            with latexCont:
-                st.write(latex_text)
-        else:
-            latexCont.empty()
+
+def load_symbols():
+    if os.path.exists(SYMBOLS_PATH):
+        with open(SYMBOLS_PATH, "r+") as f:
+            data = json.load(f)
+        symbols = {}
+        for entry in data:
+            symbols.setdefault(entry["type"], []).append(entry["symbol"])
+        return symbols
+
+def render_symbols(title, symbols, cols=4):
+    with st.popover(title):
+        colSym = st.columns(cols)
+        for i, sym in enumerate(symbols):
+            latex_symbol = f"${sym}$"
+            colSym[i % cols].button(
+                    latex_symbol,
+                    key=f"{title}_{i}",     
+                    on_click=add_latex,
+                    args=(latex_symbol,),
+                    width="stretch")
+
+def check_inactivity():
+    if st.session_state["user_authenticated"]:
+        current_ts = int(time.time())
+        elapsed_seconds = current_ts - st.session_state.last_activity
+        if elapsed_seconds > AUTO_LOGOUT_SECONDS:
+            st.session_state["user_authenticated"] = False
+            st.session_state["authenticated"] = False
+            st.warning("You have been logged out due to inactivity.")
+            st.rerun()
+
+def update_activity():
+    if st.session_state["user_authenticated"]:
+        st.session_state.last_activity = int(time.time())
 
 # -----------------------------------------------------------------------------
 # MAIN PAGE
 # -----------------------------------------------------------------------------
-
+def main_page():
 # --- ScaffoldAI INTERFACE ---
-st.set_page_config(page_title="Homepage", layout="wide")
-st.title("ScaffoldAI")
+    if st.session_state["user_authenticated"]:
+        user_input = st.text_area(key="user_text", label="Type something here...", placeholder="Type something here...", 
+                                    help="This is a text input field for user interaction.", height="content")
 
-user_input = st.text_area(key="user_text", label="Type something here...", placeholder="Type something here...", 
-                            help="This is a text input field for user interaction.", height="content")
+        latexCont = st.container()
+        if st.session_state.show_latex:
+            latex_text = st.session_state.get("user_text", "").strip()
+            if latex_text:
+                with latexCont:
+                    st.markdown(latex_text)
 
-latexCont = st.container()
+        # Helping Mode Dropdown
+        mode = st.selectbox("Helping Mode", MODES, key="mode")
 
-# Helping Mode Dropdown
-mode = st.selectbox("Helping Mode", MODES, key="mode")
+        # Upload Image Section
+        uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")
 
-# Upload Image Section
-uploaded_file = st.file_uploader("Upload Image", accept_multiple_files=False, type=["png", "jpg", "jpeg"], key=f"{st.session_state.upload_key}")
+        # Symbols Section
+        symbols = load_symbols()
+        colMathSym, colGreekSym, colPropSym, colSubScrSym, colUnitSym, colDisplaySym, _ = st.columns([3, 3, 4, 4, 4, 5, 20])
 
-# Symbols Section
-colSym1, colSym2, colSym3 = st.columns([1, 1, 14])
+        with colMathSym:
+            render_symbols("Math", symbols.get("math", []))
 
-with colSym1:
-    with st.popover("Math"):
-        col1, col2, col3, col4 = st.columns(4)
+        with colGreekSym:
+            render_symbols("Greek", symbols.get("greek", []))
+
+        with colPropSym:
+            render_symbols("Properties", symbols.get("properties", []), cols=5)
+
+        with colSubScrSym:
+            render_symbols("Subscripts", symbols.get("subscripts", []))
+
+        with colUnitSym:
+            render_symbols("Units", symbols.get("units", []))
+
+        with colDisplaySym:
+            st.button("Display Latex Format", on_click=display_latex) 
+
+        # buttons
+        col1, col2 = st.columns([1, 5])
 
         with col1:
-            st.button(r"$\times$", on_click=add_latex, args=(r"$\times$",), width="stretch") # *
-            st.button(r"$x^2$", on_click=add_latex, args=(r"$x^2$",), width="stretch") # x^2
-            st.button("{", on_click=add_latex, args=("{",), width="stretch") # {
-            st.button(r"$\frac{d}{dx}$", on_click=add_latex, args=(r"$\frac{d}{dx}$",), width="stretch") # d/dx
+            submit = st.button(label="Submit 🚀", use_container_width=True, on_click=submit_text)
 
         with col2:
-            st.button(r"$\div$", on_click=add_latex, args=(r"$\div$",), width="stretch")
-            st.button(r"$\frac{a}{b}$", on_click=add_latex, args=(r"$\frac{a}{b}$",), width="stretch") # a/b
-            st.button("}", on_click=add_latex, args=("}",), width="stretch") # }
-            st.button(r"$e^x$", on_click=add_latex, args=(r"$e^x$",), width="stretch") # e^x
+            helpful_btn = st.button("Helpful?", disabled=not st.session_state.get("output"), on_click=helpful)
 
-        with col3:
-            st.button(r"$-$", on_click=add_latex, args=(r"-",), width="stretch")
-            st.button(r"$\sqrt{x}$", on_click=add_latex, args=(r"$\sqrt{x}$",), width="stretch") # √
-            st.button(r"$($", on_click=add_latex, args=(r"(",), width="stretch") # (
-            st.button(r"$\Sigma$", on_click=add_latex, args=(r"$\Sigma$",), width="stretch") # Σ
+        # Output display
+        chat = st.container(border=False)
+        helpfulCont = st.container(border=False)
+        display_converter = LatexNodes2Text()
+
+        #Chat History
+        for message in st.session_state["conversation_history"]:
+            if message["role"] == "assistant":
+                chat.info(display_converter.latex_to_text(message["content"]))
+            else:
+                chat.info(message["content"])
         
-        with col4:
-            st.button(r"$+$", on_click=add_latex, args=(r"+",), width="stretch") # +
-            st.button(r"$x_{n}$", on_click=add_latex, args=(r"x_{n}",), width="stretch") 
-            st.button(r"$)$", on_click=add_latex, args=(r")",), width="stretch") # )
-            st.button(r"$\Delta$", on_click=add_latex, args=(r"$\Delta$",), width="stretch") # Delta
+        if st.session_state.get("last_helpful"):
+                helpfulCont.success("Logged as helpful.")
 
+        # --- COURSE MATERIALS SECTION ---
+        st.markdown("<p style='text-align: center; color: gray;'>Access different course materials</p>", unsafe_allow_html=True)
+        material_cols = st.columns(5)
 
-with colSym2:
-    with st.popover("Units"):
-        col1, col2, col3, col4 = st.columns(4)
+        materials = [
+            {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
+            {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
+            {"title": "🔬 Recitations", "desc": "Lab manuals and safety guidelines."},
+            {"title": "📖 Syllabus", "desc": "Review the class syllabus."},
+            {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
+        ]
 
-        with col1:
-            st.button(r"$\frac{m}{s^2}$", on_click=add_latex, args=(r"$\frac{m}{s^2}$",), width="stretch")
-            st.button(r"${\degree}C$", on_click=add_latex, args=(r"${\degree}C$",), width="stretch")
-            st.button(r"$\frac{g}{cm^3}$", on_click=add_latex, args=(r"$\frac{g}{cm^3}$",), width="stretch")
-
-        with col2:
-            st.button(r"$m^2$", on_click=add_latex, args=(r"$m^2$",), width="stretch")
-            st.button(r"${\degree}F$", on_click=add_latex, args=(r"${\degree}F$",), width="stretch")
-            st.button(r"$\frac{m^3}{kg}$", on_click=add_latex, args=(r"$\frac{m^3}{kg}$",), width="stretch")
-
-        with col3:
-            st.button(r"$\frac{kJ}{kg}$", on_click=add_latex, args=(r"$\frac{kJ}{kg}$",), width="stretch")
-            st.button(r"$K$", on_click=add_latex, args=(r"$K$",), width="stretch")
-            st.button(r"$kPa$", on_click=add_latex, args=(r"$kPa$",), width="stretch")
-
-        with col4:
-            st.button(r"$\frac{kJ}{kg·K}$", on_click=add_latex, args=(r"$\frac{kJ}{kg·K}$",), width="stretch")
-            st.button(r"$kJ$", on_click=add_latex, args=(r"$kJ$",), width="stretch")
-            st.button(r"$N·m$", on_click=add_latex, args=(r"$N·m$",), width="stretch")
-
-
-with colSym3:
-    st.button("Display Latex Format", on_click=display_latex) 
-
-# buttons
-col1, col2 = st.columns([1, 5])
-
-with col1:
-    submit = st.button(label="Submit 🚀", use_container_width=True, on_click=submit_text)
-
-with col2:
-    helpful = st.button("Helpful?", disabled=not st.session_state.get("output"), on_click=helpful)
-
-# Output display
-chat = st.container(border=False)
-helpfulCont = st.container(border=False)
-
-# --- COURSE MATERIALS SECTION ---
-st.markdown("<p style='text-align: center; color: gray;'>Access different course materials</p>", unsafe_allow_html=True)
-material_cols = st.columns(5)
-
-materials = [
-    {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
-    {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
-    {"title": "🔬 Recitations", "desc": "Lab manuals and safety guidelines."},
-    {"title": "📖 Syllabus", "desc": "Review the class syllabus."},
-    {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
-]
-
-for i, col in enumerate(material_cols):
-    with col:
-        with st.container(border=True):
-            st.markdown(f"### {materials[i]['title']}")
-            st.write(materials[i]['desc'])
-            if st.button("Open", key=f"mat_btn_{i}", use_container_width=True):
-                openPage = st.empty()
-                openPage.info(f"Opening {materials[i]['title']}...")
-                sleep(1) #Update later to sync with actual page load
-                openPage.empty()
-                
-                # Rewrite Later
-                if i == 0:
-                    st.switch_page("pages/lectures.py")
-                elif i == 1:
-                    st.switch_page("pages/quizzes.py")
-                elif i == 2:
-                    st.switch_page("pages/recitations.py")
-                elif i == 3:
-                    st.switch_page("pages/syllabus.py")
-                elif i == 4:
-                    st.switch_page("pages/survey.py")
+        for i, col in enumerate(material_cols):
+            with col:
+                with st.container(border=True):
+                    st.markdown(f"### {materials[i]['title']}")
+                    st.write(materials[i]['desc'])
+                    if st.button("Open", key=f"mat_btn_{i}", use_container_width=True):
+                        openPage = st.empty()
+                        openPage.info(f"Opening {materials[i]['title']}...")
+                        sleep(1) #Update later to sync with actual page load
+                        openPage.empty()
+                        
+                        # Rewrite Later
+                        if i == 0:
+                            st.switch_page("pages/lectures.py")
+                        elif i == 1:
+                            st.switch_page("pages/quizzes.py")
+                        elif i == 2:
+                            st.switch_page("pages/recitations.py")
+                        elif i == 3:
+                            st.switch_page("pages/syllabus.py")
+                        elif i == 4:
+                            st.switch_page("pages/survey.py")
+        
 
 # -----------------------------------------------------------------------------
 # SIDEBAR
 # -----------------------------------------------------------------------------
-st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
-st.sidebar.write("---")
-st.sidebar.title("ScaffoldAI History")
+def sidebar():
+        st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
+        st.sidebar.write("---")
+        st.sidebar.title("ScaffoldAI History")
 
-# Chat History 
-if os.path.isfile(JSON_LOG_PATH):
-    with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
-        try:
-            logs = json.load(f)
-            for log in logs:
-                st.sidebar.markdown(f"**Student:** {log['input']}", text_alignment="left")
-                st.sidebar.markdown(f"**ScaffoldAI:** {log['output']}", text_alignment="right")
-                st.sidebar.write("---")
-        except json.JSONDecodeError:
-            st.sidebar.write("")
+        # Chat History 
+        if os.path.isfile(JSON_LOG_PATH):
+            with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
+                try:
+                    logs = json.load(f)
+                    for log in logs:
+                        if log.get("current_chat_session") != st.session_state.curr_chat_session:
+                            continue
+                        st.sidebar.markdown(f"**Student:** {log['input']}", text_alignment="left")
+                        st.sidebar.markdown(f"**ScaffoldAI:** {log['output']}", text_alignment="right")
+                        st.sidebar.write("---")
+                except json.JSONDecodeError:
+                    st.sidebar.write("")
+
+# -----------------------------------------------------------------------------
+# AUTHENTICATION
+# -----------------------------------------------------------------------------
+st.set_page_config(page_title="Homepage", layout="wide")
+st.title("ScaffoldAI")
+instructor_access.main_page_login()
+
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if st.session_state["authenticated"]:
+    instructor_access.user_sidebar()
+else:
+    instructor_access.admin_sidebar()
+
+if st.session_state["user_authenticated"]:
+    check_inactivity()   
+    update_activity()    
+    main_page()
+    sidebar()
+

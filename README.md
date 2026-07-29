@@ -25,3 +25,8 @@ streamlit run prototype\app.py
 * Create an .env file in your directory
 * Add the line OPENAI_API_KEY={KEY}
   * Replace {KEY} with your own OpenAI API Key
+
+## Supabase
+[connections.supabase]
+SUPABASE_URL = 
+SUPABASE_KEY = 
