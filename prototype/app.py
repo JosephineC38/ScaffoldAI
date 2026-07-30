@@ -312,7 +312,7 @@ def main_page():
         display_converter = LatexNodes2Text()
 
         #Chat History
-        for message in st.session_state["conversation_history"]:
+        for message in st.session_state["conversation_history"][-2:]:
             if message["role"] == "assistant":
                 chat.info(display_converter.latex_to_text(message["content"]))
             else:
