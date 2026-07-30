@@ -9,6 +9,7 @@ from architecture.config.thermo_topics import TOPICS
 from architecture.leakage_check import contains_phrase, pass_three
 from architecture.verification import verify_answer, contains_stated_answer
 from architecture.testing.cost_tracker import turn_usage
+from architecture.scope_check import check_scope, REDIRECT_MESSAGE
 
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
@@ -184,6 +185,22 @@ def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_
 
 def generate_response(user_input: str, conversation_history, mode: str):
   turn_usage.reset()
+
+  # Scope gate runs before Pass 1 classification, on every turn (not just the
+  # opening one) — a topic that's out of bounds shouldn't be answered whether
+  # it lands on IPS, IRL, CONCEPTUAL, or CONFIRMATION, so this sits upstream
+  # of that routing entirely rather than being patched into one branch. The
+  # redirect itself is a fixed string, not model generation — see
+  # scope_check.REDIRECT_MESSAGE.
+  if not check_scope(user_input, conversation_history):
+    diagnostics = {
+      "classification": "OUT_OF_SCOPE",
+      "reasoning_gap": None,
+      "misconception": None,
+      "total_tokens": turn_usage.total_tokens,
+      "total_cost_usd": turn_usage.total_cost_usd,
+    }
+    return REDIRECT_MESSAGE, "Out of Scope", diagnostics
 
   topic, diagnosis = pass_one(user_input, conversation_history)
   diagnosis_dict = json.loads(diagnosis)

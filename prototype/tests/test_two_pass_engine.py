@@ -67,6 +67,12 @@ def _mock_pass_one(monkeypatch, make_openai_response, classification, topic="Law
     return make_openai_response(content, prompt_tokens=50, completion_tokens=20)
 
   monkeypatch.setattr(tpe.client.chat.completions, "create", fake_create)
+  # check_scope() calls out to architecture.modes._shared.client -- a
+  # separate OpenAI client instance from tpe.client, so patching the create()
+  # above doesn't cover it. These tests are about post-classification wiring,
+  # not the scope gate itself (see test_generate_response_scope_gate.py for
+  # that), so always report in-scope here.
+  monkeypatch.setattr(tpe, "check_scope", lambda user_input, conversation_history: True)
 
 
 def test_generate_response_applies_irl_to_conceptual_override(monkeypatch, make_openai_response):
