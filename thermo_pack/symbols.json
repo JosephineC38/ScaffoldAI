@@ -1,0 +1,735 @@
+[   
+    {
+        "type": "math",
+        "symbol": "\\times"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\div"
+    },
+
+    {
+        "type": "math",
+        "symbol": "-"
+    },
+
+    {
+        "type": "math",
+        "symbol": "+"
+    },
+
+    {
+        "type": "math",
+        "symbol": "x^2"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\frac{a}{b}"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\sqrt{x}"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\Sigma"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\{"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\}"
+    },
+
+    {
+        "type": "math",
+        "symbol": "("
+    },
+
+    {
+        "type": "math",
+        "symbol": ")"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\frac{d}{dx}"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\int"
+    },
+
+    {
+        "type": "math",
+        "symbol": "e^x"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\partial"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\approx"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\leq"
+    },
+
+    {
+        "type": "math",
+        "symbol": "\\geq"
+    },
+
+
+    {
+        "type": "greek",
+        "symbol": "\\delta"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\Delta"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\eta"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\eta_{II}"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\rho"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\omega"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\phi"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\epsilon"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\beta"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\mu"
+    },
+
+    {
+        "type": "greek",
+        "symbol": "\\sigma"
+    },
+    
+    {
+        "type": "greek",
+        "symbol": "\\psi"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{m}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{Q}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{W}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{V}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{S}_{gen}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\dot{X}_{dest}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "V"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "v"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "U"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "u"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "H"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "h"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "S"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "s"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "E"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "e"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "Q"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "q"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "W"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "w"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "KE"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "ke"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "PE"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "pe"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "X"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "x"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "P"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "T"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "m"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "R"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "R_u"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "Z"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "n"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "M"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "N"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "z"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta U"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta H"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta S"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta E"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta KE"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta PE"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta u"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta h"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "\\Delta s"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "S_{gen}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "X_{dest}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "COP"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "COP_{HP}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "COP_R"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "η_{th}"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "MEP"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "Ma"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "r"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "P_r"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "T_r"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "v_r"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "HHV"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "LHV"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "h_C"
+    },
+
+    {
+        "type": "properties",
+        "symbol": "h_f"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "x_{n}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{1}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{2}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{0}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{sat}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{avg}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{act}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{H}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{L}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{surr}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{atm}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{f}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{g}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{fg}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{cr}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{R}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{in}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{out}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{cv}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{gen}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{rev}"
+    },
+
+    {
+        "type": "subscripts",
+        "symbol": "_{s}"
+    },
+
+
+    {
+        "type": "units",
+        "symbol": "\\frac{m}{s^2}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "{\\degree}C"
+    },
+
+    {
+        "type": "units",
+        "symbol": "K"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{g}{cm^3}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "m^2"
+    },
+
+    {
+        "type": "units",
+        "symbol": "{\\degree}F"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{m^3}{kg}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kJ}{kg}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "kPa"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kJ}{kg \\cdot K}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "kJ"
+    },
+
+    {
+        "type": "units",
+        "symbol": "kW"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kJ}{K}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kJ}{kmol \\cdot K}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kg}{s}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{m^3}{s}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kg}{kmol}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "MPa"
+    },
+
+    {
+        "type": "units",
+        "symbol": "bar"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{m}{s}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "m^3"
+    },
+
+    {
+        "type": "units",
+        "symbol": "kmol"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{W}{m \\cdot K}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{W}{m^2 \\cdot K}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{N}{m^2}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\%"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{m^3 \\cdot m^3}{kg}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kJ \\cdot kJ}{kg}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{N}{m^2}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "m"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kg}{s}"
+    },
+
+    {
+        "type": "units",
+        "symbol": "\\frac{kW}{K}"
+    }
+]
+
+

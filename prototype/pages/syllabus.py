@@ -1,19 +1,11 @@
 import pandas as pd
 import streamlit as st
+import os
+from instructor_access import account_login, admin_sidebar, user_sidebar
 
-st.set_page_config(
-    page_title="ENGR 234 Syllabus & Dashboard",
-    page_icon="🔥",
-    layout="wide",
-)
-
-# --- PASSWORD / AUTHENTICATION SYSTEM ---
-# Set your preferred admin password here
-ADMIN_PASSWORD = "thermoadmin"
-
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
+# -----------------------------------------------------------------------------
+# VARIABLE SETUP
+# -----------------------------------------------------------------------------
 # --- INITIALIZE SESSION STATE WITH FULL SYLLABUS DATA ---
 if "term_info" not in st.session_state:
     st.session_state["term_info"] = "Spring 2026"
@@ -93,58 +85,14 @@ if "course_desc" not in st.session_state:
         "entropy, thermodynamics of gases, vapors, and liquids in various non-flow and flow processes."
     )
 
-# --- SIDEBAR: AUTHENTICATION & CONTROLS ---
-st.sidebar.title("🔒 Admin Control Panel")
-
-if not st.session_state["authenticated"]:
-    pwd_input = st.sidebar.text_input("Enter Admin Password", type="password")
-    if st.sidebar.button("Login"):
-        if pwd_input == ADMIN_PASSWORD:
-            st.session_state["authenticated"] = True
-            st.sidebar.success("Logged in as Admin!")
-            st.rerun()
-        else:
-            st.sidebar.error("Incorrect Password")
-else:
-    st.sidebar.success("🔑 Admin Mode Active")
-    if st.sidebar.button("Logout"):
-        st.session_state["authenticated"] = False
-        st.rerun()
-
-    st.sidebar.markdown("---")
-    st.sidebar.header("⚙️ Edit Syllabus Data")
-
-    st.session_state["term_info"] = st.sidebar.text_input(
-        "Semester / Term", st.session_state["term_info"]
-    )
-
-    st.session_state["textbook_info"] = st.sidebar.text_area(
-        "Textbook Info", st.session_state["textbook_info"]
-    )
-
-    st.session_state["course_desc"] = st.sidebar.text_area(
-        "Course Description", st.session_state["course_desc"]
-    )
-
-    st.sidebar.subheader("Instructors & TAs")
-    st.session_state["instructors_df"] = st.sidebar.data_editor(
-        st.session_state["instructors_df"], num_rows="dynamic", key="edit_instructors"
-    )
-
-    st.sidebar.subheader("Lecture Hours & Rooms")
-    st.session_state["lectures_df"] = st.sidebar.data_editor(
-        st.session_state["lectures_df"], num_rows="dynamic", key="edit_lectures"
-    )
-
-    st.sidebar.subheader("Recitation Hours & Rooms")
-    st.session_state["recitations_df"] = st.sidebar.data_editor(
-        st.session_state["recitations_df"], num_rows="dynamic", key="edit_recitations"
-    )
-
-    st.sidebar.subheader("Tentative Schedule & Dates")
-    st.session_state["schedule_df"] = st.sidebar.data_editor(
-        st.session_state["schedule_df"], num_rows="dynamic", key="edit_schedule"
-    )
+# -----------------------------------------------------------------------------
+# SYLLABUS PAGE
+# -----------------------------------------------------------------------------
+st.set_page_config(
+    page_title="ENGR 234 Syllabus & Dashboard",
+    page_icon="🔥",
+    layout="wide",
+)
 
 # --- MAIN DASHBOARD DISPLAY ---
 st.title(f"Thermodynamics (ENGR 234) — {st.session_state['term_info']}")
@@ -298,3 +246,59 @@ with p_tab5:
     * **Crisis Text Line:** Text "HOME" to 741-741
     * **CARE Team (Non-urgent):** `care@stevens.edu`
     """)
+
+# -----------------------------------------------------------------------------
+# SIDEBAR & AUTHENTICATION
+# -----------------------------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+if st.session_state["authenticated"]:
+    admin_sidebar()
+else:
+    user_sidebar()
+
+st.sidebar.title("🔒 Admin Control Panel")
+
+if not st.session_state["authenticated"]:
+    account_login()
+else:
+    st.sidebar.success("🔑 Admin Mode Active")
+    if st.sidebar.button("Logout"):
+        st.session_state["authenticated"] = False
+        st.rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("⚙️ Edit Syllabus Data")
+
+    st.session_state["term_info"] = st.sidebar.text_input(
+        "Semester / Term", st.session_state["term_info"]
+    )
+
+    st.session_state["textbook_info"] = st.sidebar.text_area(
+        "Textbook Info", st.session_state["textbook_info"]
+    )
+
+    st.session_state["course_desc"] = st.sidebar.text_area(
+        "Course Description", st.session_state["course_desc"]
+    )
+
+    st.sidebar.subheader("Instructors & TAs")
+    st.session_state["instructors_df"] = st.sidebar.data_editor(
+        st.session_state["instructors_df"], num_rows="dynamic", key="edit_instructors"
+    )
+
+    st.sidebar.subheader("Lecture Hours & Rooms")
+    st.session_state["lectures_df"] = st.sidebar.data_editor(
+        st.session_state["lectures_df"], num_rows="dynamic", key="edit_lectures"
+    )
+
+    st.sidebar.subheader("Recitation Hours & Rooms")
+    st.session_state["recitations_df"] = st.sidebar.data_editor(
+        st.session_state["recitations_df"], num_rows="dynamic", key="edit_recitations"
+    )
+
+    st.sidebar.subheader("Tentative Schedule & Dates")
+    st.session_state["schedule_df"] = st.sidebar.data_editor(
+        st.session_state["schedule_df"], num_rows="dynamic", key="edit_schedule"
+    )
+

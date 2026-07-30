@@ -1,12 +1,11 @@
 import os
 import pandas as pd
 import streamlit as st
+from instructor_access import account_login, admin_sidebar, user_sidebar
 
-st.set_page_config(page_title="Survey", layout="wide")
-st.title("Survey")
-
-st.write("Please evaluate your experience using the prototype below.")
-
+# -----------------------------------------------------------------------------
+# VARIABLE SETUP
+# -----------------------------------------------------------------------------
 # Standard Likert Scale Options
 options = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
 
@@ -15,28 +14,6 @@ all_responses = {}
 
 # Continuous question counter for Likert sections
 q_counter = 1
-
-
-def render_section(section_title, questions):
-  """Helper function to display a section with horizontal radio scales."""
-  global q_counter
-  st.subheader(section_title)
-
-  for q_text in questions:
-    st.markdown(f"**{q_counter}. {q_text}**")
-    field_key = f"{section_title.lower()}_q{q_counter}"
-
-    all_responses[f"Q{q_counter}_{section_title}"] = st.radio(
-        label=q_text,
-        options=options,
-        horizontal=True,
-        key=field_key,
-        label_visibility="collapsed",
-        index=None,  # Default to unselected
-    )
-    q_counter += 1
-    st.write("")
-
 
 # --- LIKERT SECTIONS (Questions 1 - 15) ---
 integrity_questions = [
@@ -77,6 +54,36 @@ self_efficacy_questions = [
     "I feel prepared for exam problems after using this prototype.",
     "I am able to explain core thermodynamics concepts to peers after using this prototype.",
 ]
+
+# -----------------------------------------------------------------------------
+# FRONTEND FUNCTIONS 
+# -----------------------------------------------------------------------------
+def render_section(section_title, questions):
+  """Helper function to display a section with horizontal radio scales."""
+  global q_counter
+  st.subheader(section_title)
+
+  for q_text in questions:
+    st.markdown(f"**{q_counter}. {q_text}**")
+    field_key = f"{section_title.lower()}_q{q_counter}"
+
+    all_responses[f"Q{q_counter}_{section_title}"] = st.radio(
+        label=q_text,
+        options=options,
+        horizontal=True,
+        key=field_key,
+        label_visibility="collapsed",
+        index=None,  # Default to unselected
+    )
+    q_counter += 1
+    st.write("")
+
+# -----------------------------------------------------------------------------
+# SURVEY PAGE
+# -----------------------------------------------------------------------------
+st.set_page_config(page_title="Survey", layout="wide")
+st.title("Survey")
+st.write("Please evaluate your experience using the prototype below.")
 
 render_section("Integrity", integrity_questions)
 st.divider()
@@ -185,3 +192,15 @@ if st.button("Submit Survey", type="primary"):
 
     st.write("### Submitted Response Summary")
     st.dataframe(df_responses)
+
+# -----------------------------------------------------------------------------
+# SIDEBAR
+# -----------------------------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if st.session_state["authenticated"]:
+    admin_sidebar()
+else:
+    user_sidebar()
+account_login()
