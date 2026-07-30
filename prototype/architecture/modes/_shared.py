@@ -67,11 +67,37 @@ def _verification_context(verification: dict) -> str:
       """
 
 
+# Unlike the CONFIRMATION/verification path (architecture.verification), this
+# branch has no reference material or scaffolded direction-identification
+# step at all -- it's answered from the model's own unconstrained knowledge.
+# That gap let the exact sign confusion verification.py's _semantic_check()
+# already documents and defends against (see the comment above its own
+# prompt) recur here unguarded: "work input" to a compressor was answered as
+# positive, conflating the colloquial positive-magnitude sense of "input"
+# with the signed by-system convention, where work done ON the system by an
+# external agent is negative. Mirrors _semantic_check()'s fix -- state the
+# convention explicitly and name the exact confusable case -- rather than
+# leaving it to whatever the model's own defaults happen to be.
+_SIGN_CONVENTION_ANCHOR = (
+  "Governing sign convention for any energy-balance question: dU = Q - W. "
+  "W is work done BY the system -- positive when the system does work on its "
+  "surroundings, and NEGATIVE when work is done ON the system by an external "
+  "agent (e.g. a compressor, pump, or paddle wheel acting on the working "
+  "fluid) -- this is true even when that external work is colloquially "
+  "described as 'work input': input being a positive quantity of energy "
+  "delivered does not make its sign positive under this convention. Q is "
+  "heat added TO the system, positive when absorbed and negative when "
+  "rejected. Apply this convention consistently."
+)
+
+
 def conceptual_response(user_input: str, diagnosis: str, topic: str, conversation_history: list, system_prompt: str) -> str:
   pass_two_prompt = f"""
       topic: {topic}
       diagnostic context: {diagnosis}
       original student input message: {user_input}
+
+      {_SIGN_CONVENTION_ANCHOR}
 
       The student is asking a direct factual or definitional question (a law, definition, or formula) with no problem context to work through. Use the diagnostic context only to calibrate depth and framing, not to decide whether to answer.
 
