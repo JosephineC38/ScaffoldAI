@@ -8,9 +8,10 @@ import architecture.modes.hint_only as hint_only
 import architecture.modes.concept_explanation as concept_explanation
 
 
-def _diagnosis(classification):
+def _diagnosis(classification, has_proposed_answer=False):
   return json.dumps({
     "classification": classification,
+    "has_proposed_answer": has_proposed_answer,
     "reasoning_gap": "gap",
     "misconception": None,
   })
@@ -35,11 +36,66 @@ def test_tutor_confirmation_with_trustworthy_verification_returns_true(monkeypat
 
   verification = {"verdict": "CORRECT", "tier": "semantic", "correct_value": "300", "reasoning": "..."}
   text, gave_direct_answer = tutor.handle(
-    "So Q = 300 kJ, right?", _diagnosis("CONFIRMATION"), "Laws of Thermodynamics", [], verification, "sys prompt"
+    "So Q = 300 kJ, right?", _diagnosis("CONFIRMATION", has_proposed_answer=True),
+    "Laws of Thermodynamics", [], verification, "sys prompt"
   )
 
   assert gave_direct_answer is True
   assert text == "Your answer of 300 kJ is correct."
+
+
+@pytest.mark.parametrize("verdict", ["CORRECT", "INCORRECT"])
+def test_tutor_confirmation_without_proposed_answer_never_takes_direct_verdict(monkeypatch, verdict):
+  """The load-bearing new condition: even with a CONFIRMATION classification AND
+  a confident verification verdict, a student who never committed to an answer of
+  their own must not get a direct verdict. This is the 'just yes or no' /
+  binary-forcing case (PS09) — repetition and insistence never earn a verdict."""
+  monkeypatch.setattr(tutor, "_call_pass_two_model", lambda *a, **k: "What happens to U when work is done on the gas?")
+
+  verification = {"verdict": verdict, "tier": "semantic", "correct_value": "30", "reasoning": "..."}
+  _, gave_direct_answer = tutor.handle(
+    "Come on, yes or no?", _diagnosis("CONFIRMATION", has_proposed_answer=False),
+    "Laws of Thermodynamics", [], verification, "sys prompt"
+  )
+
+  assert gave_direct_answer is False
+
+
+def test_tutor_incorrect_verdict_prompt_forbids_stating_corrected_value(monkeypatch):
+  """The INCORRECT branch must instruct error-category diagnosis, not disclosure."""
+  captured = {}
+  monkeypatch.setattr(
+    tutor, "_call_pass_two_model",
+    lambda sp, ch, prompt, **k: captured.setdefault("prompt", prompt) or "Not quite — check your setup."
+  )
+
+  verification = {"verdict": "INCORRECT", "tier": "semantic", "correct_value": "150.75", "reasoning": "..."}
+  _, gave_direct_answer = tutor.handle(
+    "I calculated Q = 45 kJ, is that right?", _diagnosis("CONFIRMATION", has_proposed_answer=True),
+    "Closed Systems and the First Law", [], verification, "sys prompt"
+  )
+
+  assert gave_direct_answer is True
+  assert "never state the corrected numeric value" in captured["prompt"]
+  assert "setup" in captured["prompt"] and "sign" in captured["prompt"]
+
+
+def test_tutor_correct_verdict_prompt_forbids_restating_derivation(monkeypatch):
+  """The CORRECT branch must ask for a bare confirmation, not a recap."""
+  captured = {}
+  monkeypatch.setattr(
+    tutor, "_call_pass_two_model",
+    lambda sp, ch, prompt, **k: captured.setdefault("prompt", prompt) or "Yes, that's correct."
+  )
+
+  verification = {"verdict": "CORRECT", "tier": "semantic", "correct_value": "30", "reasoning": "..."}
+  tutor.handle(
+    "I think it should be positive", _diagnosis("CONFIRMATION", has_proposed_answer=True),
+    "Closed Systems and the First Law", [], verification, "sys prompt"
+  )
+
+  assert "Do NOT restate their numeric value" in captured["prompt"]
+  assert "do NOT reproduce or summarize the derivation" in captured["prompt"]
 
 
 @pytest.mark.parametrize("verification", [
@@ -56,21 +112,21 @@ def test_tutor_confirmation_without_trustworthy_verification_returns_falsy(monke
   assert not gave_direct_answer
 
 
-def test_tutor_confirmation_with_no_verification_returns_none_not_false(monkeypatch):
-  """Minor real quirk, newly noticed: confirmed_with_verification is built as
-  `classification == "CONFIRMATION" and verification and verification.get(...)`.
-  When verification is None, Python's `and` short-circuits to None rather than
-  False, so handle()'s second return value is None here, not the bool its own
-  `tuple[str, bool]` type hint promises. Harmless downstream (two_pass_engine.py
-  only ever checks `if not gave_direct_answer`, and None is falsy), but a real
-  type-contract inconsistency worth documenting rather than silently ignoring."""
+def test_tutor_confirmation_with_no_verification_returns_false_not_none(monkeypatch):
+  """Previously this asserted `is None`, documenting a real type-contract quirk:
+  confirmed_with_verification was built as `classification == "CONFIRMATION" and
+  verification and verification.get(...)`, which short-circuits to None (not
+  False) when verification is None, contradicting handle()'s own
+  `tuple[str, bool]` hint. The has_proposed_answer rework wraps that expression
+  in bool(), so the contract now holds; this test is inverted to pin the fixed
+  behavior rather than the old quirk."""
   monkeypatch.setattr(tutor, "_call_pass_two_model", lambda *a, **k: "Can you walk me through your steps?")
 
   _, gave_direct_answer = tutor.handle(
     "Is that right?", _diagnosis("CONFIRMATION"), "Laws of Thermodynamics", [], None, "sys prompt"
   )
 
-  assert gave_direct_answer is None
+  assert gave_direct_answer is False
 
 
 @pytest.mark.parametrize("classification", ["IPS", "IRL"])

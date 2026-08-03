@@ -50,3 +50,6 @@ For testing:
 8 symbol/sign-convention cases;
 6 false-premise/hallucination cases;
 4 additional multi-turn recovery scenarios.
+
+to do:
+- compare test 1 and test 2 -> anything that is different in responses, what is better/improved

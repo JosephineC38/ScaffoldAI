@@ -34,6 +34,56 @@ def contains_stated_answer(text: str) -> bool:
     return has_digit and has_confirmation_language
 
 
+# A student can commit to an answer without ever writing a number — "I think it
+# should be positive" is as much a claim as "I got 45 kJ", and the tutor owes it
+# the same verdict. _CLAIM_OPENERS are first-person commitment markers; a
+# directional claim only counts when an opener is followed by a direction word,
+# so an open question ("is it positive or negative?") — which carries the
+# direction word but no commitment — stays false. This is deliberately narrow:
+# it is the deterministic FALLBACK for when pass_one omits has_proposed_answer,
+# not the primary gate, so a miss degrades to Socratic (safe) rather than to an
+# unearned direct verdict.
+_CLAIM_OPENERS = (
+    "i think", "i believe", "i got", "i calculated", "i found", "i'd say",
+    "i would say", "my answer", "my guess", "it should be", "it must be",
+    "it has to be", "i'm saying", "im saying", "i say", "so it's", "so its",
+    "pretty sure", "i reckon", "i'm guessing", "im guessing",
+)
+
+_DIRECTION_WORDS = (
+    "positive", "negative", "zero", "increase", "increases", "increasing",
+    "decrease", "decreases", "decreasing", "rises", "rising", "falls",
+    "falling", "constant", "unchanged", "greater", "larger", "smaller",
+    "less", "higher", "lower", "same",
+)
+
+
+def contains_directional_claim(text: str) -> bool:
+    """True when the student commits to a qualitative/directional conclusion of
+    their own (no number required) — e.g. 'I think it should be positive'.
+    Requires a first-person commitment opener followed (within the same message)
+    by a direction word, so bare questions and repeated demands for a verdict
+    ('is it positive?', 'yes or no?') do NOT qualify."""
+    lowered = text.lower()
+    for opener in _CLAIM_OPENERS:
+        idx = lowered.find(opener)
+        while idx != -1:
+            tail = lowered[idx + len(opener):]
+            if any(word in tail for word in _DIRECTION_WORDS):
+                return True
+            idx = lowered.find(opener, idx + 1)
+    return False
+
+
+def contains_proposed_answer(text: str) -> bool:
+    """Deterministic fallback for 'has the student committed to an answer of
+    their own?' — numeric claim (contains_stated_answer) OR directional claim
+    (contains_directional_claim). Used only when pass_one's has_proposed_answer
+    field is missing or malformed; pass_one's own judgment is the primary
+    signal because it can see the conversation history, which this cannot."""
+    return contains_stated_answer(text) or contains_directional_claim(text)
+
+
 # deterministic arithmetic check
 _ALLOWED_BINOPS = {
     ast.Add: operator.add,
@@ -123,7 +173,7 @@ def _extract_number(text) -> float:
         return None
 
 
-def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> dict:
+def _semantic_check(problem_statement: str, student_answer: str, topic: str, proposed_value: str) -> dict:
     reference = get_reference(topic)
 
     # Explicitly scaffolds "who is the system / which direction is work or heat
@@ -147,6 +197,11 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
 
     Student's stated derivation/answer to check:
     {student_answer}
+
+    The specific result the student is claiming as their own answer (already
+    identified for you — compare against THIS, not against any given value,
+    constant, or intermediate quantity appearing in their working):
+    {proposed_value}
 
     Before applying any signs, first explicitly identify:
     1. What is "the system" in this problem?
@@ -186,8 +241,20 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
     # 450 kJ answer INCORRECT). Where both correct_value and the student's own
     # stated final number can be parsed, derive the verdict by comparing them in
     # code instead of trusting the model's self-reported verdict outright.
+    #
+    # student_value comes from pass_one's extracted proposed_value, NOT from a
+    # regex over the raw message. The previous approach (_last_stated_number,
+    # "the number after the last '='") had no way to tell a claimed answer from a
+    # constant: on "Q = 215.4 kJ using Q = m·cv·ΔT with cv = 0.718 kJ/kg·K" it
+    # picked up 0.718, and this comparison then manufactured an INCORRECT verdict
+    # against a model derivation that had actually agreed with the student.
+    # Position in the sentence is simply not a signal for which number is the
+    # student's claim, in either order, so identifying it is left to the pass_one
+    # call that already reads the message for meaning. The comparison itself is
+    # unchanged and still fully deterministic. A qualitative claim ("positive")
+    # parses to None here and correctly defers to the semantic verdict below.
     model_value = _extract_number(result.get("correct_value"))
-    student_value = _extract_number(_last_stated_number(student_answer))
+    student_value = _extract_number(proposed_value)
     if model_value is not None and student_value is not None:
         tolerance = max(abs(model_value) * 0.01, 0.5)
         result["verdict"] = "CORRECT" if abs(model_value - student_value) <= tolerance else "INCORRECT"
@@ -198,9 +265,17 @@ def _semantic_check(problem_statement: str, student_answer: str, topic: str) -> 
 
 
 def _last_stated_number(text: str):
-    """Best-effort extraction of the student's final stated numeric answer:
-    the number immediately after the last '=' sign, if there is one, else the
-    last number anywhere in the text."""
+    """RETIRED as a source of truth — no longer called by verify_answer().
+
+    Best-effort extraction of the student's final stated numeric answer: the
+    number immediately after the last '=' sign, if there is one, else the last
+    number anywhere in the text. This is unreliable by construction — sentence
+    position does not distinguish a claimed answer from a constant or a given
+    value ("Q = 215.4 kJ ... with cv = 0.718" yields 0.718), and the fallback
+    branch additionally matches bare commas and mis-handles a leading '+'.
+    pass_one's proposed_value field replaced it; see _semantic_check. Kept only
+    so the failure mode stays documented in one place — do not reintroduce it
+    into the verification path."""
     segments = text.split("=")
     if len(segments) > 1:
         match = _LEADING_NUMBER.match(segments[-1])
@@ -211,18 +286,24 @@ def _last_stated_number(text: str):
 
 
 # combined verdict
-def verify_answer(problem_statement: str, student_answer: str, topic: str) -> dict:
+def verify_answer(problem_statement: str, student_answer: str, topic: str, proposed_value: str) -> dict:
     """Check a student's stated answer against static reference material —
     deliberately does NOT take conversation_history, so it can't inherit
     drift from the tutor's own earlier (possibly wrong) turns in this
     conversation. Callers are responsible for sourcing problem_statement /
     student_answer from raw student-authored text only.
 
+    proposed_value is the student's own claimed answer as identified by
+    pass_one ("215.4 kJ", "positive"), and is what the deterministic
+    correctness comparison is made against. Callers must not synthesize it by
+    regex over the raw message — that is the bug this parameter exists to fix
+    — and should skip verification entirely when pass_one didn't produce one.
+
     Returns: {"verdict": CORRECT|INCORRECT|UNCERTAIN, "tier": deterministic|semantic|disagreement,
               "correct_value": ..., "reasoning": ...}
     """
     arithmetic = _check_arithmetic(student_answer)
-    semantic = _semantic_check(problem_statement, student_answer, topic)
+    semantic = _semantic_check(problem_statement, student_answer, topic, proposed_value)
 
     if arithmetic["tier_result"] == "ARITHMETIC_ERROR":
         if semantic.get("verdict") == "CORRECT":

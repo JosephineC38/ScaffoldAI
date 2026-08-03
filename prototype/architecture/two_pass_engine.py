@@ -1,13 +1,14 @@
 import os
 import re
 import json
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from architecture import prompt_builder
 from architecture.config.thermo_topics import TOPICS
 from architecture.leakage_check import contains_phrase, pass_three
-from architecture.verification import verify_answer, contains_stated_answer
+from architecture.verification import verify_answer, contains_proposed_answer
 from architecture.testing.cost_tracker import turn_usage
 from architecture.scope_check import check_scope, REDIRECT_MESSAGE
 
@@ -17,7 +18,92 @@ load_dotenv(dotenv_path)
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=API_KEY)
 
+logger = logging.getLogger(__name__)
+
 from architecture.modes._shared import CONVERSATION_HISTORY_WINDOW
+
+
+# --- Topic canonicalization ------------------------------------------------
+# pass_one's "topic" is a soft prompt instruction ("one of: {TOPICS}"), not a
+# constrained enum, so the model returns semantically-identical labels with
+# different surface text — most commonly a word-order swap ("Work, Heat, and
+# Energy Transfer" for "Heat, Work, and Energy Transfer"). get_reference()
+# does an exact-match dict lookup, so every such variant silently fell back
+# to DEFAULT_REFERENCE and the verification tier lost that topic's real
+# formulas — including, for that specific pair, the by-system sign-convention
+# text. Measured at 46/133 non-scope turns (~35%) across
+# testing/transcripts{,_v2}/ and 25/40 runs in
+# testing/topic_canonicalization_before_2026-08-03.jsonl.
+#
+# Fixed on the CONSUMPTION side deliberately. The alternative — tightening
+# the pass_one prompt so the model phrases topics more consistently — is the
+# approach that already failed twice on this codebase (the scope gate's first
+# fix, and the pass_three sibling gap; see testing/session_summary_2026-07-30.md
+# §9): a prompt guardrail tuned against the variants you have seen generalizes
+# to those variants and nothing adjacent. Word-set matching handles every
+# reordering of a topic's words at once, including ones never observed, and is
+# deterministic and unit-testable without an API call.
+
+# Punctuation that appears in TOPICS entries and in observed model variants;
+# normalized to whitespace so it can't affect tokenization. This also turns
+# "&" into a separator, which is why it isn't listed as a connective below.
+_TOPIC_PUNCTUATION = re.compile(r"[^\w\s]+")
+
+# Connectives carry no topic identity — "Entropy and Exergy", "Entropy &
+# Exergy" and "Entropy, Exergy" all name the same topic — so they're dropped
+# rather than being allowed to make otherwise-identical labels compare
+# unequal. Kept deliberately short: every word removed here is a word that
+# can no longer distinguish two topics, and "of" is NOT in the list because
+# it does real work in "Laws of Thermodynamics" / "Equations of State".
+_TOPIC_CONNECTIVES = frozenset({"and", "or", "vs", "versus"})
+
+
+def _topic_word_key(topic: str) -> frozenset:
+  """Order-independent identity for a topic label: casefolded word set with
+  punctuation and connectives stripped. 'Work, Heat, and Energy Transfer' and
+  'Heat, Work, and Energy Transfer' both collapse to the same key.
+
+  A set (not a sorted list) is used so duplicate words can't make two
+  otherwise-identical labels compare unequal. No TOPICS entry contains a
+  repeated word, so nothing is lost by ignoring multiplicity."""
+  cleaned = _TOPIC_PUNCTUATION.sub(" ", str(topic))
+  return frozenset(cleaned.casefold().split()) - _TOPIC_CONNECTIVES
+
+
+# Built once at import. Two TOPICS entries colliding on the same word key
+# would make canonicalization ambiguous, so that is an assertion, not a
+# silent last-one-wins — test_config_consistency.py covers it too.
+_TOPIC_BY_WORD_KEY = {}
+for _canonical in TOPICS:
+  _key = _topic_word_key(_canonical)
+  assert _key not in _TOPIC_BY_WORD_KEY, (
+    f"TOPICS entries {_TOPIC_BY_WORD_KEY[_key]!r} and {_canonical!r} are "
+    f"word-order variants of each other; canonicalization can't disambiguate them."
+  )
+  _TOPIC_BY_WORD_KEY[_key] = _canonical
+
+
+def canonicalize_topic(raw_topic):
+  """Map a model-generated topic label onto its canonical TOPICS entry.
+
+  Returns the canonical string, or None when there is no confident match.
+  None is a real outcome the caller must handle (log it, then fall back) —
+  it deliberately does NOT return DEFAULT_REFERENCE's topic or the raw
+  label, because 'we could not identify this topic' and 'this topic has no
+  reference on file' are different facts and the caller needs to tell them
+  apart.
+
+  Matching is exact-after-normalization only: casing, surrounding
+  whitespace, punctuation and word order are ignored, nothing else. A label
+  that is merely a SUBSET of a topic's words (a bare 'Heat', observed twice
+  in the transcript corpus) is NOT matched — 'Heat' is a plausible fragment
+  of both 'Heat, Work, and Energy Transfer' and 'Laws of Thermodynamics'-
+  adjacent material, and guessing between them would substitute a silent
+  wrong-reference bug for the silent missing-reference bug being fixed
+  here. Those fall through to None and get logged."""
+  if not isinstance(raw_topic, str) or not raw_topic.strip():
+    return None
+  return _TOPIC_BY_WORD_KEY.get(_topic_word_key(raw_topic))
 
 
 # --- Deterministic IRL->CONCEPTUAL override -------------------------------
@@ -116,6 +202,28 @@ def _extract_verification_inputs(user_input: str, conversation_history: list) ->
   return problem_statement, user_input
 
 
+_NULLISH_PROPOSED_VALUES = {"", "null", "none", "n/a", "na", "nan", "unknown"}
+
+
+def _clean_proposed_value(raw) -> str:
+  """Normalize pass_one's proposed_value into a usable claim string, or None.
+
+  Accepts a number as well as a string, since the model sometimes emits a bare
+  JSON number for a numeric claim. Returns None for anything unusable — missing,
+  JSON null, empty, or a string spelling of null the model produced instead of a
+  real one — so the caller can fail safe rather than verify against a non-claim."""
+  if isinstance(raw, bool) or raw is None:
+    return None
+  if isinstance(raw, (int, float)):
+    return str(raw)
+  if not isinstance(raw, str):
+    return None
+  cleaned = raw.strip()
+  if not cleaned or cleaned.lower() in _NULLISH_PROPOSED_VALUES:
+    return None
+  return cleaned
+
+
 def pass_one(user_input: str, conversation_history: list):
   history_text = _format_history_for_pass_one(conversation_history)
 
@@ -129,6 +237,8 @@ def pass_one(user_input: str, conversation_history: list):
     {{
       "topic": "one of: {', '.join(TOPICS)}",
       "classification": "IPS", "IRL", "CONCEPTUAL", or "CONFIRMATION"
+      "has_proposed_answer": true or false,
+      "proposed_value": "the student's own claimed answer exactly as they stated it, or null",
       "reasoning_gap": "brief description of what the student is missing/asking",
       "misconception": "specific misconception if one exists, otherwise null"
     }}
@@ -137,7 +247,24 @@ def pass_one(user_input: str, conversation_history: list):
     - IPS: student has encountered this concept before but is making an execution error
     - IRL: concept is new to the student
     - CONCEPTUAL: student is asking for a definition, law, formula, or terminology directly, with no problem context, numeric values, or reference to their own attempt
-    - CONFIRMATION: the student has already worked through a specific problem (in this message or earlier in the conversation history) and has a specific result on the table, and is now asking for a verdict on it — e.g. "so delta U = 300 J, right?", "is that correct?", "can you just tell me if I'm right or wrong?". Use the conversation history to check whether a derivation/result was already stated before classifying this way; a bare "is that right?" with no prior derivation in view is not enough on its own.
+    - CONFIRMATION: the student has already worked through a specific problem (in this message or earlier in the conversation history) and has a specific result on the table, and is now asking for a verdict on it — e.g. "so delta U = 300 J, right?", "I got Wb = 45 kJ, is that correct?", "I think it should be negative — am I right?". Note that the verdict-seeking phrasing alone is never what makes it CONFIRMATION: a bare "is that correct?" or "can you just tell me if I'm right or wrong?" qualifies ONLY when the student's own specific result is actually in view (in this message or earlier in the conversation history). Use the conversation history to check whether a derivation/result was already stated before classifying this way; a bare "is that right?" with no prior derivation in view is not enough on its own.
+
+    has_proposed_answer rules (judge this INDEPENDENTLY of the classification above):
+    - true ONLY if the student has committed to a specific answer of their own — either a specific value ("I got 45 kJ", "so delta U = 300 J") or a specific directional/qualitative conclusion ("I think it should be positive", "I believe the entropy decreases", "it must be zero") — stated as their OWN claim, in this message or earlier in the conversation history.
+    - false for open questions ("is the change in internal energy positive or negative?"), requests for the answer ("just give me the final number", "finish the derivation for me"), and demands for a verdict with no claim of their own attached ("yes or no?", "just yes or no", "come on, yes or no?", "is it positive?").
+    - Repetition, insistence, or frustration NEVER makes this true. A student demanding a verdict for the fourth time still has no proposed answer unless they have actually stated one. Asking "is it positive?" is a question, not a claim; saying "I think it's positive" is a claim.
+    - Claimed competence is not a proposed answer: "I've got (a) and (b) worked out" or "I've shown I understand the method" asserts understanding, not a specific result, so it stays false unless the actual result is stated.
+    - A symbolic or algebraic setup the student has NOT evaluated is not a proposed answer. "I set up q - w = delta h, so w = h1 - h2, can you finish it?" states a relationship they have not yet computed — that is false, not true. If producing a value would require YOU to do the arithmetic for them, they have not proposed an answer.
+
+    proposed_value rules:
+    - Decide has_proposed_answer FIRST, on its own rules above. Only if it is true do you fill this in. Finding a candidate value here is never a reason to flip has_proposed_answer to true.
+    - If has_proposed_answer is false, set this to null.
+    - A word or number that appears only inside the student's QUESTION is not their claim. In "Yes or no -- is it positive?" the student is asking whether it is positive, not asserting that it is: has_proposed_answer is false and this is null. Extract only what the student asserts, never what they are asking about.
+    - Otherwise extract ONLY the answer the student is claiming as their OWN result, in their own words and units exactly as written — e.g. "215.4 kJ", "+65 kJ", "-94.6 kJ".
+    - NEVER extract a value the problem gave them, a physical constant, or an intermediate quantity from their formula or working. In "I calculated Q = 215.4 kJ using Q = m·cv·ΔT with cv = 0.718 kJ/kg·K", the proposed_value is "215.4 kJ" — NOT 0.718 (a constant they were using) and NOT any given temperature or mass. The student's claim is not identified by where it appears in the sentence: it may come before or after their supporting work, so read for meaning rather than taking the first or last number.
+    - For a directional or qualitative claim with no number, capture the claim as stated — e.g. "positive", "negative", "zero", "it increases" — not a number.
+    - Copy what the student actually wrote. NEVER compute, evaluate, simplify, rearrange, or infer a value they did not write down themselves. Given "w = -delta h = h1 - h2" with h1 and h2 supplied earlier, you must NOT return "350 kJ" or "-350 kJ" — the student never wrote that number, so has_proposed_answer is false and this is null. If you cannot quote the value from their own words, there isn't one.
+    - Report the value alone, without the surrounding sentence and without any of your own commentary.
 
 
     Do NOT include the correct answer. Respond only with structured diagnostic. Your output will not be shown to the student
@@ -157,7 +284,27 @@ def pass_one(user_input: str, conversation_history: list):
   turn_usage.record("gpt-4o-mini", pass_one_analysis.usage.prompt_tokens, pass_one_analysis.usage.completion_tokens)
 
   diagnosis = json.loads(pass_one_analysis.choices[0].message.content)
-  topic = diagnosis.pop("topic")
+  raw_topic = diagnosis.pop("topic")
+
+  # Canonicalized here, at the single point where the raw label leaves
+  # pass_one, rather than at the generate_response() call site — this way no
+  # consumer can ever observe the raw form, whether it's get_reference(),
+  # the pass_two prompt, or the transcript the harnesses log. See
+  # canonicalize_topic() above for why this is a consumption-side fix.
+  topic = canonicalize_topic(raw_topic)
+  if topic is None:
+    # Unrecognized even after normalization. The student-visible behavior is
+    # unchanged (get_reference falls back to DEFAULT_REFERENCE exactly as
+    # before), but this used to be completely invisible — the whole point of
+    # the warning is that the next occurrence is traceable instead of silent.
+    logger.warning(
+      "pass_one returned an unrecognized topic label %r (not a word-order "
+      "variant of any TOPICS entry); falling back to DEFAULT_REFERENCE. "
+      "Student input began: %r",
+      raw_topic,
+      user_input[:120],
+    )
+    topic = raw_topic
 
   return topic, json.dumps(diagnosis)
 
@@ -214,15 +361,39 @@ def generate_response(user_input: str, conversation_history, mode: str):
     diagnosis_dict["classification"] = classification
     diagnosis = json.dumps(diagnosis_dict)
 
-  # Run answer verification whenever the student appears to have a specific
-  # result on the table — primarily driven by the CONFIRMATION classification,
-  # with an independent heuristic backstop (contains_stated_answer) in case
-  # classification misses it. Deliberately does not pass conversation_history
-  # into verify_answer itself — see _extract_verification_inputs.
+  # Verification runs only when the student has actually committed to an answer
+  # of their own — there must be something of theirs TO check. This replaced an
+  # earlier `classification == "CONFIRMATION" or contains_stated_answer(...)`
+  # OR-gate, under which a bare demand for a verdict ("just yes or no") was
+  # routinely classified CONFIRMATION, sent to verify_answer() with the demand
+  # itself standing in as the "student answer" (see _extract_verification_inputs,
+  # which unconditionally uses user_input), and came back with a CORRECT/INCORRECT
+  # verdict on a non-answer — which then satisfied tutor.py's direct-verdict
+  # branch and leaked the result. pass_one's own has_proposed_answer judgment is
+  # primary because it can see conversation history; contains_proposed_answer is
+  # the deterministic fallback for a missing/malformed field only. Deliberately
+  # does not pass conversation_history into verify_answer itself — see
+  # _extract_verification_inputs.
+  raw_flag = diagnosis_dict.get("has_proposed_answer")
+  has_proposed_answer = raw_flag if isinstance(raw_flag, bool) else contains_proposed_answer(user_input)
+  # Normalize back onto the diagnosis so downstream mode handlers read a real
+  # bool rather than re-deriving it or tripping over a missing key.
+  diagnosis_dict["has_proposed_answer"] = has_proposed_answer
+  proposed_value = _clean_proposed_value(diagnosis_dict.get("proposed_value"))
+  diagnosis_dict["proposed_value"] = proposed_value
+  diagnosis = json.dumps(diagnosis_dict)
+
+  # WHAT the student claimed comes from pass_one's proposed_value, not from a
+  # regex over the raw message — see verification._last_stated_number for the
+  # failure mode that approach had. If pass_one says there's a proposed answer
+  # but didn't give a usable value for it, fail safe: skip verification rather
+  # than guessing at the claim from raw text, which is exactly the bug being
+  # fixed. verification stays None, so tutor.py's direct-verdict branch can't
+  # fire and the turn routes to the Socratic branch.
   verification = None
-  if classification == "CONFIRMATION" or contains_stated_answer(user_input):
+  if has_proposed_answer and proposed_value:
     problem_statement, student_answer = _extract_verification_inputs(user_input, conversation_history)
-    verification = verify_answer(problem_statement, student_answer, topic)
+    verification = verify_answer(problem_statement, student_answer, topic, proposed_value)
 
   system_response, gave_direct_answer = pass_two(user_input, diagnosis, topic, conversation_history, mode, verification)
 
