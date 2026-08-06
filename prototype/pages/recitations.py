@@ -179,11 +179,17 @@ def recitations():
 # -----------------------------------------------------------------------------
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+
+if "ta_authenticated" not in st.session_state:
+        st.session_state["ta_authenticated"] = False
     
 if st.session_state["authenticated"]:
     rec_update()
     recitations()
     admin_sidebar()
+elif st.session_state["ta_authenticated"]:
+    recitations()
+    ta_sidebar()
 else:
     recitations()
     user_sidebar()

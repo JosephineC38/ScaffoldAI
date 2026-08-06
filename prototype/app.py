@@ -376,13 +376,11 @@ def sidebar():
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Homepage", layout="wide")
 st.title("ScaffoldAI")
+
+# Must run before anything reads authenticated / ta_authenticated / user_authenticated
+account_access.init_auth_state()
+
 account_access.main_page_login()
-
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-if "ta_authenticated" not in st.session_state:
-    st.session_state["ta_authenticated"] = False
 
 if st.session_state["authenticated"]:
     account_access.admin_sidebar()
