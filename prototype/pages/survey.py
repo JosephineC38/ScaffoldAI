@@ -108,7 +108,7 @@ all_responses["Q20_Accuracy_Confidence"] = st.text_area(
 )
 
 all_responses["Q21_Refusal_vs_Hallucination"] = st.text_area(
-    "21. Did you notice any moments where the prototype started to 'hallucinate' and gave a wrong answer instead of refusing to answer and explaining why? *"
+    "21. Did you notice any moments where the prototype gave a wrong answer instead of refusing to answer and explaining why? *"
 )
 
 all_responses["Q22_Correction_Ease"] = st.text_area(
