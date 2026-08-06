@@ -1,7 +1,10 @@
 import pandas as pd
 import streamlit as st
 import os
-from instructor_access import account_login, admin_sidebar, user_sidebar
+try:
+    from ScaffoldAI.prototype.account_access import account_login, admin_sidebar, user_sidebar
+except:
+    from prototype.account_access import account_login, admin_sidebar, user_sidebar
 
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP

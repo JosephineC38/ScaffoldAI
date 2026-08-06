@@ -1,6 +1,9 @@
 import streamlit as st
 import os
-from instructor_access import account_login, admin_sidebar, user_sidebar
+try:
+    from ScaffoldAI.prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
+except:
+    from prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
 
 # Define file paths for recitation files
 REC_DIR = "prototype/materials/recitations"

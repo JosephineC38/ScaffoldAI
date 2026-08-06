@@ -12,7 +12,10 @@ import time
 import secrets
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
-import instructor_access
+try:
+    import ScaffoldAI.prototype.account_access as account_access
+except:
+    import prototype.account_access as account_access
 from pylatexenc.latex2text import LatexNodes2Text
 from architecture.config.modes import MODES
 
@@ -26,6 +29,7 @@ SYMBOLS_PATH = os.path.join("thermo_pack", "symbols.json")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 AUTO_LOGOUT_SECONDS = 3600 #1 hour 
+VERSION_LABEL = "ScaffoldAI v0.1-SU26"
 
 # -----------------------------------------------------------------------------
 # LOGGING FUNCTIONS
@@ -147,8 +151,11 @@ def submit_text():
             "misconception": diagnostics.get("misconception"),
             "verification_verdict": diagnostics.get("verification_verdict"),
             "verification_tier": diagnostics.get("verification_tier"),
+            "total_tokens": diagnostics.get("total_tokens"),
+            "total_cost_usd": diagnostics.get("total_cost_usd"),
             "helpful": None,
-            "current_chat_session": st.session_state.curr_chat_session
+            "current_chat_session": st.session_state.curr_chat_session,
+            "version": VERSION_LABEL
         }
         log_to_csv(log)
         log_to_json(log)
@@ -163,6 +170,8 @@ def submit_text():
             log["uploaded_image"] = image_path
 
         st.session_state["prev_input"] = user_input
+        st.session_state.user_history.append(user_input)
+        st.session_state.assistant_history.append(converter.latex_to_text(response))
 
         # Reset user input field after submission
         st.session_state["user_text"] = ""
@@ -176,26 +185,8 @@ def new_chat():
     st.session_state["last_helpful"] = False
     st.session_state["output"] = ""
 
-    if st.session_state.curr_chat_session and os.path.isfile(CSV_LOG_PATH):
-        with open(CSV_LOG_PATH, "r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames
-            rows = [r for r in reader if r.get("current_chat_session") != st.session_state.curr_chat_session]
-        if fieldnames:
-            with open(CSV_LOG_PATH, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(rows)
-
-    if st.session_state.curr_chat_session and os.path.isfile(JSON_LOG_PATH):
-        try:
-            with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        except json.JSONDecodeError:
-            logs = []
-        logs = [e for e in logs if e.get("current_chat_session") != st.session_state.curr_chat_session]
-        with open(JSON_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=4)
+    st.session_state["user_history"] = []
+    st.session_state["assistant_history"] = []
     
     for file in os.listdir(LOG_DIR):
         if file.endswith((".png", ".jpg", ".jpeg")):
@@ -259,7 +250,7 @@ def update_activity():
 def main_page():
 # --- ScaffoldAI INTERFACE ---
     if st.session_state["user_authenticated"]:
-        user_input = st.text_area(key="user_text", label="Type something here...", placeholder="Type something here...", 
+        user_input = st.text_area(key="user_text", label="Type something here...", placeholder="Type something here...",
                                     help="This is a text input field for user interaction.", height="content")
 
         latexCont = st.container()
@@ -277,7 +268,7 @@ def main_page():
 
         # Symbols Section
         symbols = load_symbols()
-        colMathSym, colGreekSym, colPropSym, colSubScrSym, colUnitSym, colDisplaySym, _ = st.columns([3, 3, 4, 4, 4, 5, 20])
+        colMathSym, colGreekSym, colPropSym, colSubScrSym, colUnitSym, colDisplaySym, _ , colVersion = st.columns([3, 3, 4, 4, 4, 6, 20, 5])
 
         with colMathSym:
             render_symbols("Math", symbols.get("math", []))
@@ -296,6 +287,9 @@ def main_page():
 
         with colDisplaySym:
             st.button("Display Latex Format", on_click=display_latex) 
+
+        with colVersion:
+            st.caption(VERSION_LABEL)
 
         # buttons
         col1, col2 = st.columns([1, 5])
@@ -360,39 +354,42 @@ def main_page():
 # -----------------------------------------------------------------------------
 # SIDEBAR
 # -----------------------------------------------------------------------------
+if "user_history" not in st.session_state:
+    st.session_state.user_history = []
+
+if "assistant_history" not in st.session_state:
+    st.session_state.assistant_history = []
+
 def sidebar():
         st.sidebar.button("➕ New Chat", use_container_width=True, on_click=new_chat)
         st.sidebar.write("---")
         st.sidebar.title("ScaffoldAI History")
 
         # Chat History 
-        if os.path.isfile(JSON_LOG_PATH):
-            with open(JSON_LOG_PATH, "r", encoding="utf-8") as f:
-                try:
-                    logs = json.load(f)
-                    for log in logs:
-                        if log.get("current_chat_session") != st.session_state.curr_chat_session:
-                            continue
-                        st.sidebar.markdown(f"**Student:** {log['input']}", text_alignment="left")
-                        st.sidebar.markdown(f"**ScaffoldAI:** {log['output']}", text_alignment="right")
-                        st.sidebar.write("---")
-                except json.JSONDecodeError:
-                    st.sidebar.write("")
+        for student_txt, ai_txt in zip(st.session_state.user_history, st.session_state.assistant_history):
+            st.sidebar.markdown(f"**Student:** {student_txt}", text_alignment="left")
+            st.sidebar.markdown(f"**ScaffoldAI:** {ai_txt}", text_alignment="right")
+            st.sidebar.write("---")
 
 # -----------------------------------------------------------------------------
 # AUTHENTICATION
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="Homepage", layout="wide")
 st.title("ScaffoldAI")
-instructor_access.main_page_login()
+account_access.main_page_login()
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
+if "ta_authenticated" not in st.session_state:
+    st.session_state["ta_authenticated"] = False
+
 if st.session_state["authenticated"]:
-    instructor_access.user_sidebar()
+    account_access.admin_sidebar()
+elif st.session_state["ta_authenticated"]:
+    account_access.ta_sidebar()
 else:
-    instructor_access.admin_sidebar()
+    account_access.user_sidebar()
 
 if st.session_state["user_authenticated"]:
     check_inactivity()   

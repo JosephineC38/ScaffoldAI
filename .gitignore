@@ -2,3 +2,5 @@
 .claude/
 /testing/
 .streamlit/secrets.toml
+/node_modules/
+/prototype/__pycache__/
