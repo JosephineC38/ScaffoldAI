@@ -1,8 +1,10 @@
 import streamlit as st
 import datetime
 from st_supabase_connection import SupabaseConnection
-from instructor_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
-
+try:
+    from ScaffoldAI.prototype.account_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
+except:
+    from prototype.account_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
 # Initialize connection.
 conn = st.connection("supabase",type=SupabaseConnection)
 
@@ -22,19 +24,35 @@ def admin_page():
             password = st.text_input("Password", type="password")
             start_time = st.datetime_input("Start Time", format="MM/DD/YYYY")
             end_time = st.datetime_input("End Time", format="MM/DD/YYYY")
+
+            option_map = {0: "ScaffoldAI", 1: "TA"}
+            selection = st.pills(
+                "Select Password Type",
+                options=option_map.keys(),
+                format_func=lambda option: option_map[option],
+                selection_mode="single",
+            )
+            
             submitted = st.form_submit_button("Add password", use_container_width=True, type="primary")
             if submitted:
                 if start_time and end_time:
-                    conn.table("passwords").insert({
-                        "password": password,
-                        "start_time": start_time.strftime("%m-%d-%Y %H:%M"),
-                        "end_time": end_time.strftime("%m-%d-%Y %H:%M"),
-                    }).execute()
+                    if selection == 0:
+                        conn.table("passwords").insert({
+                            "password": password,
+                            "start_time": start_time.strftime("%m-%d-%Y %H:%M"),
+                            "end_time": end_time.strftime("%m-%d-%Y %H:%M"),
+                        }).execute()
+                    else:
+                        conn.table("ta_passwords").insert({
+                            "password": password,
+                            "start_time": start_time.strftime("%m-%d-%Y %H:%M"),
+                            "end_time": end_time.strftime("%m-%d-%Y %H:%M"),
+                        }).execute()
                     st.success("Password added.")
                     st.rerun()
 
-    #Password History
-    with st.expander("Password History"):
+    #"ScaffoldAI Password History
+    with st.expander("ScaffoldAI Password History"):
         rows = conn.table("passwords").select("*").execute()
 
         if not rows.data:
@@ -72,6 +90,47 @@ def admin_page():
                         if st.button("Update", key=f"end_btn_{row['id']}", use_container_width=True):
                             if new_end:
                                 conn.table("passwords").update({"end_time": new_end.strftime("%m-%d-%Y %H:%M")}).eq("id", row['id']).execute()
+                                st.rerun()
+
+    #"ScaffoldAI Password History
+    with st.expander("TA Password History"):
+        rows = conn.table("ta_passwords").select("*").execute()
+
+        if not rows.data:
+            st.info("No passwords history.")
+
+        for row in rows.data:
+            with st.container(key=f"pwd_cont_{row['id']}", border=True):
+
+                header_col, _, del_col = st.columns([1,1,1], vertical_alignment="center")
+                with header_col:
+                    st.write(f"{row['password']}")
+                with del_col:
+                    if st.button("Delete", key=f"delete_btn_{row['id']}", use_container_width=True):
+                        conn.table("ta_passwords").delete().eq("id", row['id']).execute()
+                        st.rerun()
+
+                info_start, info_end, _ = st.columns([1,1,3])
+                with info_start:
+                    st.write("Start Time: ", row['start_time'])
+                with info_end:
+                    st.write("End Time: ", row['end_time'])
+
+                with st.expander("Edit Time"):
+                    edit_start, edit_end = st.columns(2)
+
+                    with edit_start:
+                        new_start = st.datetime_input("New Start Time", format="MM/DD/YYYY", key=f"start_input_{row['id']}")
+                        if st.button("Update", key=f"start_btn_{row['id']}", use_container_width=True):
+                            if new_start:
+                                conn.table("ta_passwords").update({"start_time": new_start.strftime("%m-%d-%Y %H:%M")}).eq("id", row['id']).execute()
+                                st.rerun()
+
+                    with edit_end:
+                        new_end = st.datetime_input("New End Time", format="MM/DD/YYYY", key=f"end_input_{row['id']}")
+                        if st.button("Update", key=f"end_btn_{row['id']}", use_container_width=True):
+                            if new_end:
+                                conn.table("ta_passwords").update({"end_time": new_end.strftime("%m-%d-%Y %H:%M")}).eq("id", row['id']).execute()
                                 st.rerun()
 
     st.divider()

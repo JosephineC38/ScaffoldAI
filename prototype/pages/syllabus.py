@@ -1,7 +1,10 @@
 import pandas as pd
 import streamlit as st
 import os
-from instructor_access import account_login, admin_sidebar, user_sidebar
+try:
+    from ScaffoldAI.prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
+except:
+    from prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
 
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP
@@ -252,8 +255,14 @@ with p_tab5:
 # -----------------------------------------------------------------------------
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+
+if "ta_authenticated" not in st.session_state:
+    st.session_state["ta_authenticated"] = False
+
 if st.session_state["authenticated"]:
     admin_sidebar()
+elif st.session_state["ta_authenticated"]:
+    ta_sidebar()
 else:
     user_sidebar()
 
