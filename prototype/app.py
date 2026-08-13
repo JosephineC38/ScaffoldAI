@@ -320,11 +320,11 @@ def main_page():
         material_cols = st.columns(5)
 
         materials = [
-            {"title": "📚 Lectures", "desc": "Review recent class slides & notes."},
+            {"title": "📚 Lectures", "desc": "Review recent class slides."},
             {"title": "📝 Quizzes", "desc": "Practice sets and mock exams."},
-            {"title": "🔬 Recitations", "desc": "Lab manuals and safety guidelines."},
+            {"title": "🔬 Recitations", "desc": "Check recitation questions."},
             {"title": "📖 Syllabus", "desc": "Review the class syllabus."},
-            {"title": "📖 Survey", "desc": "Course schedule and grading criteria."}
+            {"title": "📖 Survey", "desc": "Take the course survey."}
         ]
 
         for i, col in enumerate(material_cols):

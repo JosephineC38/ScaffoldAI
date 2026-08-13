@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# authenticated - Instructors
+# ta_authenticated - TAs
+# user_authenticated - Students
+# -----------------------------------------------------------------------------
 import streamlit as st
 import os
 import time
@@ -113,7 +118,9 @@ def log_out():
 def account_logout_homepage():
     st.button("Log Out", on_click=log_out)
 
+# -----------------------------------------------------------------------------
 # ScaffoldAI Main Page login
+# -----------------------------------------------------------------------------
 def main_page_login():
     """Student gate for the main page: sets `user_authenticated`."""
     init_auth_state()
@@ -186,7 +193,7 @@ def survey_target_settings():
     account_logout_homepage()
 
 # -----------------------------------------------------------------------------
-# SIDEBAR HELPERS
+# SIDEBAR DISPLAYS
 # -----------------------------------------------------------------------------
 def admin_sidebar():
     st.sidebar.page_link('app.py', label='Home')

@@ -4,7 +4,7 @@ Version: ScaffoldAI v0.1-SU26
 This was built in Python with the Streamlit framework. View the documentation for Streamlit [here](https://docs.streamlit.io/). If you need help setting up the repository, please read the [Repository Setup Guide](readme_assets/REPOSETUP.md). It assumes that you have no prior knowledge of VSCode or GitHub.
 
 ## Installation 
-install the requirements. 
+Install the requirements. 
 
 ```
 pip install -r requirements.txt

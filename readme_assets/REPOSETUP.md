@@ -2,7 +2,7 @@
 # Repository Setup Guide
 * Visual Studio Code is installed. VSCode can be installed [here](https://code.visualstudio.com/download?_exp_download=fb315fc982).
 * The repository should be downloaded locally. To set it up, do the following steps. 
-1. In your File Explorer, create a folder. The folder's name doesn't matter. For reference, the README uses "ScaffoldAIFolder" as its name. 
+1. In your File Explorer, create a folder. The folder's name doesn't matter. For reference, this guide uses "ScaffoldAIFolder" as its name. 
 2. Open Visual Studio Code on your computer.
 3. Open the created folder. On the top-left bar, click File -> Open Folder or use the shortcut: Ctrl+K Ctrl+O. If asked, trust the folder.
 4. Open a new terminal. On the top-left bar, click Terminal -> New Terminal or use the shortcut: Ctrl+Shift+`
@@ -26,4 +26,6 @@ Please copy and paste the command into the terminal.
 
 You finished setting up the repository! Please go back to the README for further instructions.
 
-
+## Important Notice
+* If updating the repo's code, the OpenAPI API Key, SUPABASE_URL, and SUPABASE_KEY should not be included within the commit or be shared with anyone. Essentially, don't 
+include the .env file or the .streamlit/secrets.toml file in the commit. You can hide certain files from being included in the commit by adding it to the .gitignore folder.
