@@ -4,10 +4,11 @@ from architecture.modes import _shared
 from architecture.modes._shared import _verification_context, _call_pass_two_model
 
 
+# routes CONCEPTUAL to a direct answer; everything else runs through has_proposed_answer to pick between confirm-correct, confirm-incorrect, or pure-guidance
 def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
   diagnosis_dict = json.loads(diagnosis)
   classification = diagnosis_dict.get("classification")
-  has_proposed_answer = diagnosis_dict.get("has_proposed_answer") is True
+  has_proposed_answer = diagnosis_dict.get("has_proposed_answer") is True # true when student commits to a claim, not demanded a verdict
 
   if classification == "CONCEPTUAL":
     response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt)

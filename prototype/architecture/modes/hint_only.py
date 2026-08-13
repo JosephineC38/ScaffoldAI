@@ -7,7 +7,7 @@ from architecture.modes._shared import _verification_context, _call_pass_two_mod
 def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
   classification = json.loads(diagnosis).get("classification")
 
-  if classification == "CONCEPTUAL":
+  if classification == "CONCEPTUAL": # delegated to _shared.conceptual_response for an in-depth answer
     response_text = _shared.conceptual_response(user_input, diagnosis, topic, conversation_history, system_prompt)
     return response_text, True
 

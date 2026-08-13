@@ -17,6 +17,7 @@ def contains_phrase(text: str) -> bool:
   return any(phrase in text_lower for phrase in ALL_PHRASES)
 
 def pass_three(leaked_response: str, topic: str) -> str: # only called if output detects answer leakage
+  # rewrites response to strip leaked answers
   pass_three_prompt = f""" 
     The following tutoring response contains direct answers or answer-revealing 
     language that must be removed. Rewrite it to preserve the Socratic scaffolding 

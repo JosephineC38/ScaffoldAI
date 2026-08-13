@@ -1,3 +1,5 @@
+# static keywords/phrases to assist in catching leakages from tutor 
+
 DIRECT_ANSWER_DECLARATIONS = [
   "the answer is",
   "the solution is",

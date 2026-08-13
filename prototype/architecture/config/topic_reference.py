@@ -1,7 +1,7 @@
-# Static, authoritative reference formulas/conventions per topic, used by the
-# semantic verification tier (architecture.verification) to check a student's
-# derivation without depending on conversation history. Keep this independent
-# of any single conversation so it can't inherit conversational drift.
+""" Static, authoritative reference formulas/conventions per topic, used by the
+semantic verification tier (architecture.verification) to check a student's
+derivation without depending on conversation history. Keep this independent
+of any single conversation so it can't inherit conversational drift. """
 
 TOPIC_REFERENCE = {
     "Laws of Thermodynamics": (

@@ -102,6 +102,7 @@ OUT_OF_SCOPE = "OUT_OF_SCOPE"
 
 
 def _format_history(conversation_history: list) -> str:
+  # Renders the last CONVERSATION_HISTORY_WINDOW turns as "Student:"/"Tutor:" text, or a placeholder if empty.
   recent = conversation_history[-CONVERSATION_HISTORY_WINDOW:]
   if not recent:
     return "(no prior turns in this conversation)"
@@ -112,6 +113,7 @@ def _format_history(conversation_history: list) -> str:
 
 
 def _classify_scope(user_input: str, conversation_history: list) -> str:
+  # asks model has_topic and in_scope to classify current turn NO_TOPIC / IN_SCOPE / OUT_OF_SCOPE
   """Returns one of NO_TOPIC / IN_SCOPE / OUT_OF_SCOPE for the CURRENT
   student message. Evaluated fresh on every turn (not just turn 1) so a
   mid-conversation pivot into an out-of-scope topic -- even one that opens
@@ -208,6 +210,7 @@ def _classify_scope(user_input: str, conversation_history: list) -> str:
 
 
 def check_scope(user_input: str, conversation_history: list) -> bool:
+  # returns False on OUT_OF_SCOPE pivot
   """Returns True unless the current message is a genuine OUT_OF_SCOPE
   pivot -- both NO_TOPIC and IN_SCOPE fall through to normal routing, since
   a topic-less message (a pressure tactic, an authority claim, frustration,

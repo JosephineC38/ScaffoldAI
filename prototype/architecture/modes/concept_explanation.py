@@ -3,10 +3,11 @@ import json
 from architecture.modes._shared import _verification_context, _call_pass_two_model
 
 
+# routes a turn to one of three response strategies based on pass 1's classification
 def handle(user_input: str, diagnosis: str, topic: str, conversation_history: list, verification: dict, system_prompt: str) -> tuple[str, bool]:
   classification = json.loads(diagnosis).get("classification")
 
-  if classification == "CONCEPTUAL":
+  if classification == "CONCEPTUAL": # answers a bare factual/definitional question in depth
     pass_two_prompt = f"""
       topic: {topic}
       diagnostic context: {diagnosis}
@@ -23,7 +24,7 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
     # CONFIRMATION and IPS/IRL branches below.
     return response_text, True
 
-  if classification == "CONFIRMATION":
+  if classification == "CONFIRMATION": # student has a proposed result and wants it checked
     pass_two_prompt = f"""
       topic: {topic}
       diagnostic context: {diagnosis}
@@ -38,6 +39,7 @@ def handle(user_input: str, diagnosis: str, topic: str, conversation_history: li
     return response_text, False
 
   # IPS / IRL
+  # explains the misconception/concept in general terms without giving away specific numbers, derivation, or answer
   pass_two_prompt = f"""
       topic: {topic}
       diagnoistic context (do not reveal this to the student): {diagnosis}

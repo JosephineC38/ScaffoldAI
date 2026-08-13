@@ -13,6 +13,7 @@ client = OpenAI(api_key=API_KEY)
 CONVERSATION_HISTORY_WINDOW = 8  # last N messages (not exchanges) of conversation_history; shared by Pass 1 and Pass 2
 
 
+# raised when a pass 2 completion gets cut off by max_tokens on both the first call and the retry
 class ResponseTruncatedError(RuntimeError):
   """Raised when a Pass 2 completion is cut off by max_tokens twice in a row
   (the original call and one same-prompt retry). At temperature=0.7, response
@@ -56,6 +57,7 @@ def _call_pass_two_model(system_prompt: str, conversation_history: list, pass_tw
   return response.choices[0].message.content
 
 
+# formats a verification result dict into prompt text
 def _verification_context(verification: dict) -> str:
   if not verification:
     return ""
@@ -67,17 +69,18 @@ def _verification_context(verification: dict) -> str:
       """
 
 
-# Unlike the CONFIRMATION/verification path (architecture.verification), this
-# branch has no reference material or scaffolded direction-identification
-# step at all -- it's answered from the model's own unconstrained knowledge.
-# That gap let the exact sign confusion verification.py's _semantic_check()
-# already documents and defends against (see the comment above its own
-# prompt) recur here unguarded: "work input" to a compressor was answered as
-# positive, conflating the colloquial positive-magnitude sense of "input"
-# with the signed by-system convention, where work done ON the system by an
-# external agent is negative. Mirrors _semantic_check()'s fix -- state the
-# convention explicitly and name the exact confusable case -- rather than
-# leaving it to whatever the model's own defaults happen to be.
+"""Unlike the CONFIRMATION/verification path (architecture.verification), this
+branch has no reference material or scaffolded direction-identification
+step at all -- it's answered from the model's own unconstrained knowledge.
+That gap let the exact sign confusion verification.py's _semantic_check()
+already documents and defends against (see the comment above its own
+prompt) recur here unguarded: "work input" to a compressor was answered as
+positive, conflating the colloquial positive-magnitude sense of "input"
+with the signed by-system convention, where work done ON the system by an
+external agent is negative. Mirrors _semantic_check()'s fix -- state the
+convention explicitly and name the exact confusable case -- rather than
+leaving it to whatever the model's own defaults happen to be."""
+
 _SIGN_CONVENTION_ANCHOR = (
   "Governing sign convention for any energy-balance question: dU = Q - W. "
   "W is work done BY the system -- positive when the system does work on its "
@@ -91,6 +94,7 @@ _SIGN_CONVENTION_ANCHOR = (
 )
 
 
+# conceptual branch: answers direct factual/definitional questions outright
 def conceptual_response(user_input: str, diagnosis: str, topic: str, conversation_history: list, system_prompt: str) -> str:
   pass_two_prompt = f"""
       topic: {topic}

@@ -49,6 +49,7 @@ from architecture.modes._shared import CONVERSATION_HISTORY_WINDOW
 # "&" into a separator, which is why it isn't listed as a connective below.
 _TOPIC_PUNCTUATION = re.compile(r"[^\w\s]+")
 
+
 # Connectives carry no topic identity — "Entropy and Exergy", "Entropy &
 # Exergy" and "Entropy, Exergy" all name the same topic — so they're dropped
 # rather than being allowed to make otherwise-identical labels compare
@@ -174,6 +175,7 @@ def has_problem_context(conversation_history: list, current_message: str) -> boo
   return False
 
 
+# Renders recent turns as "Student:"/"Tutor:" text for the pass_one prompt.
 def _format_history_for_pass_one(conversation_history: list) -> str:
   recent = conversation_history[-CONVERSATION_HISTORY_WINDOW:]
   if not recent:
@@ -224,6 +226,7 @@ def _clean_proposed_value(raw) -> str:
   return cleaned
 
 
+# Runs gpt-4o-mini classification, canonicalizes the returned topic label, and returns (topic, diagnosis_json).
 def pass_one(user_input: str, conversation_history: list):
   history_text = _format_history_for_pass_one(conversation_history)
 
@@ -323,6 +326,8 @@ MODE_HANDLERS = {
   "Concept Explanation": concept_explanation.handle,
 }
 
+
+# Builds the system prompt and dispatches to the mode-specific handler in MODE_HANDLERS.
 def pass_two(user_input: str, pass_one_diagnosis: str, topic: str, conversation_history: list, mode: str, verification: dict = None):
   system_prompt = prompt_builder.prompt_builder()
   handler = MODE_HANDLERS.get(mode)
