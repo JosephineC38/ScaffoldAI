@@ -1,4 +1,5 @@
 import os
+import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -7,7 +8,7 @@ from architecture.testing.cost_tracker import turn_usage
 dotenv_path = Path(__file__).parents[3] / ".env"
 load_dotenv(dotenv_path)
 
-API_KEY = os.getenv("OPENAI_API_KEY")
+API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=API_KEY)
 
 CONVERSATION_HISTORY_WINDOW = 8  # last N messages (not exchanges) of conversation_history; shared by Pass 1 and Pass 2

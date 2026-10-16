@@ -2,6 +2,7 @@ import os
 import re
 import json
 import logging
+import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -15,7 +16,7 @@ from architecture.scope_check import check_scope, REDIRECT_MESSAGE
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
 
-API_KEY = os.getenv("OPENAI_API_KEY")
+API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=API_KEY)
 
 logger = logging.getLogger(__name__)

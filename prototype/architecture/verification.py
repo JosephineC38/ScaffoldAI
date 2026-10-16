@@ -3,6 +3,7 @@ import re
 import ast
 import json
 import operator
+import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -12,7 +13,7 @@ from architecture.testing.cost_tracker import turn_usage
 dotenv_path = Path(__file__).parents[2] / ".env"
 load_dotenv(dotenv_path)
 
-API_KEY = os.getenv("OPENAI_API_KEY")
+API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=API_KEY)
 
 VALID_VERDICTS = ("CORRECT", "INCORRECT", "UNCERTAIN")
