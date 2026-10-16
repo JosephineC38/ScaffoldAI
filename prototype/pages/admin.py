@@ -1,10 +1,7 @@
 import streamlit as st
 import datetime
 from st_supabase_connection import SupabaseConnection
-try:
-    from ScaffoldAI.prototype.account_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
-except:
-    from prototype.account_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
+from account_access import account_login_homepage, account_logout_homepage, admin_sidebar, user_sidebar
 # Initialize connection.
 conn = st.connection("supabase",type=SupabaseConnection)
 

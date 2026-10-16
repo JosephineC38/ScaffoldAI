@@ -12,10 +12,7 @@ import time
 import secrets
 from datetime import datetime
 from architecture.two_pass_engine import generate_response
-try:
-    import ScaffoldAI.prototype.account_access as account_access
-except:
-    import prototype.account_access as account_access
+import account_access
 from pylatexenc.latex2text import LatexNodes2Text
 from architecture.config.modes import MODES
 
@@ -394,4 +391,3 @@ if st.session_state["user_authenticated"]:
     update_activity()    
     main_page()
     sidebar()
-

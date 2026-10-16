@@ -2,10 +2,7 @@ import os
 import json
 import pandas as pd
 import streamlit as st
-try:
-    from ScaffoldAI.prototype.account_access import account_login, admin_sidebar, ta_sidebar, account_login, user_sidebar
-except:
-    from prototype.account_access import account_login, admin_sidebar, ta_sidebar, account_login, user_sidebar
+from account_access import account_login, admin_sidebar, ta_sidebar, user_sidebar
 
 # Define file paths for activity logs
 REC_DIR = "prototype/materials/recitations"
@@ -120,4 +117,3 @@ else:
     user_sidebar()
     no_ta_access()
 account_login()
-

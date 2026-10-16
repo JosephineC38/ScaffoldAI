@@ -1,10 +1,7 @@
 import pandas as pd
 import streamlit as st
 import os
-try:
-    from ScaffoldAI.prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
-except:
-    from prototype.account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
+from account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
 
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP
@@ -310,4 +307,3 @@ else:
     st.session_state["schedule_df"] = st.sidebar.data_editor(
         st.session_state["schedule_df"], num_rows="dynamic", key="edit_schedule"
     )
-
