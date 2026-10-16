@@ -4,3 +4,4 @@ pylatexenc
 openai
 python-dotenv
 pytest
+streamlit[pdf]

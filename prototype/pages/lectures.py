@@ -1,5 +1,6 @@
 import streamlit as st
 from account_access import account_login, admin_sidebar, user_sidebar, ta_sidebar
+
 # -----------------------------------------------------------------------------
 # VARIABLE SETUP
 # -----------------------------------------------------------------------------
