@@ -1,4 +1,5 @@
 streamlit
+st-supabase-connection
 pylatexenc
 openai
 python-dotenv
